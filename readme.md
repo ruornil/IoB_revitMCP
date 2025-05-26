@@ -1,6 +1,6 @@
 # Revit MCP Plugin
 
-This project implements a Model Context Protocol (MCP) server and command interface for Autodesk Revit, enabling both typed command execution and dynamic scripting capabilities (e.g. via IronPython). It supports HTTP-based interactions to trigger Revit operations externally.
+This project implements a Model Context Protocol (MCP) server and command interface for Autodesk Revit, enabling typed command execution and (future) dynamic scripting capabilities. It supports HTTP-based interactions to trigger Revit operations externally.
 
 ---
 
@@ -8,58 +8,70 @@ This project implements a Model Context Protocol (MCP) server and command interf
 
 * **HTTP Listener**: Listens on `http://localhost:5005/mcp/` to receive JSON-based commands.
 * **Command Pattern**: Typed commands implement the `ICommand` interface.
-* **Dynamic Scripting**: Execute IronPython scripts with access to `doc`, `uidoc`, Revit API types, and helper methods.
 * **External Event Handling**: Safely dispatches commands into Revit’s UI thread.
+* **View Filter Automation**: Create and apply filters with overrides directly from HTTP requests.
 
 ---
 
 ## 📁 Project Structure
 
-| File                      | Purpose                                                                                         |
-| ------------------------- | ----------------------------------------------------------------------------------------------- |
-| `App.cs`                  | Entry point for the Revit add-in. Starts and stops the MCP server.                              |
-| `McpServer.cs`            | Initializes the HTTP listener and threads.                                                      |
-| `RequestHandler.cs`       | Routes incoming requests to appropriate ICommand implementations or IronPython script executor. |
-| `ICommand.cs`             | Interface that all typed command classes implement.                                             |
-| `GetParametersCommand.cs` | Retrieves all parameters of a selected Revit element.                                           |
-| `ListElementsCommand.cs`  | Lists Revit elements of a given category.                                                       |
-| `RevitHelpers.cs`         | Utility functions for IronPython scripting (e.g., element filtering, parameter setting).        |
-| `UiHelpers.cs`            | Revit UI utilities (e.g., `TaskDialog`).                                                        |
+| File                          | Purpose                                                                        |
+| ----------------------------- | ------------------------------------------------------------------------------ |
+| `App.cs`                      | Entry point for the Revit add-in. Starts and stops the MCP server.             |
+| `McpServer.cs`                | Initializes the HTTP listener and threads.                                     |
+| `RequestHandler.cs`           | Routes incoming requests to appropriate ICommand implementations.              |
+| `ICommand.cs`                 | Interface that all typed command classes implement.                            |
+| `GetParametersCommand.cs`     | Retrieves all parameters of a selected Revit element.                          |
+| `ListElementsCommand.cs`      | Lists Revit elements of a given category.                                      |
+| `FilterByParameterCommand.cs` | Filters a list of elements based on parameter value.                           |
+| `PlanExecutorCommand.cs`      | Executes a stepwise plan, enabling command chaining.                           |
+| `AddViewFilterCommand.cs`     | Creates view filters with visibility, color, line pattern, and fill overrides. |
+| `RevitHelpers.cs`             | Utility functions for element filtering and parameter setting.                 |
+| `UiHelpers.cs`                | Revit UI utilities (e.g., `TaskDialog`).                                       |
 
 ---
 
-## 🚀 Usage
+## 🚀 Usage Examples
 
-### Trigger a Typed Command
-
-POST to `http://localhost:5005/mcp/`
+### 🔹 Create and Apply a View Filter
 
 ```json
 {
-  "action": "GetParameters"
+  "action": "AddViewFilter",
+  "category": "Walls",
+  "filter_name": "ColoredExternalWalls",
+  "parameter": "Top is Attached",
+  "value": "No",
+  "visible": "true",
+  "color": "255,0,0",
+  "line_pattern": "Dashed",
+  "fill_color": "255,255,0",
+  "fill_pattern": "Solid Fill"
 }
 ```
 
-### Run a Python Script
+### 🔹 Chain Commands Using Plan Execution
 
 ```json
 {
-  "action": "RunPython",
-  "script": "print(doc.Title)"
+  "action": "ExecutePlan",
+  "steps": [
+    { "action": "ListElementsByCategory", "params": { "category": "Walls" } },
+    { "action": "FilterByParameter", "params": { "param": "Top is Attached", "value": "No" } }
+  ]
 }
 ```
 
 ---
 
-## 🛠 Future Development
+## 🛠 Development Notes
 
-* [ ] Add more typed Revit commands (e.g., create walls, place families)
-* [ ] Add gRPC or WebSocket transport (optional)
-* [ ] Unit tests and logging support
-* [ ] External DLL loader for fully isolated command execution
+* ✅ C# 7.3 compatibility enforced
+* ✅ Removed IronPython scripting (future feature)
+* ✅ `OverrideGraphicSettings` supports projection color, line pattern, fill color, and fill pattern
 
 ---
 
 ## 📄 License
 
-MIT License (or project-specific license to be added)
+MIT License.

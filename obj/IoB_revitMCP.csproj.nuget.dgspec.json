@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\ctuna\\Documents\\gitHub\\RevitAddinDev\\IoB_revitMCP\\IoB_revitMCP.csproj": {}
+    "C:\\Users\\ctuna\\Documents\\gitHub\\IoB_revitMCP\\IoB_revitMCP.csproj": {}
   },
   "projects": {
-    "C:\\Users\\ctuna\\Documents\\gitHub\\RevitAddinDev\\IoB_revitMCP\\IoB_revitMCP.csproj": {
+    "C:\\Users\\ctuna\\Documents\\gitHub\\IoB_revitMCP\\IoB_revitMCP.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\ctuna\\Documents\\gitHub\\RevitAddinDev\\IoB_revitMCP\\IoB_revitMCP.csproj",
+        "projectUniqueName": "C:\\Users\\ctuna\\Documents\\gitHub\\IoB_revitMCP\\IoB_revitMCP.csproj",
         "projectName": "IoB_revitMCP",
-        "projectPath": "C:\\Users\\ctuna\\Documents\\gitHub\\RevitAddinDev\\IoB_revitMCP\\IoB_revitMCP.csproj",
+        "projectPath": "C:\\Users\\ctuna\\Documents\\gitHub\\IoB_revitMCP\\IoB_revitMCP.csproj",
         "packagesPath": "C:\\Users\\ctuna\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\ctuna\\Documents\\gitHub\\RevitAddinDev\\IoB_revitMCP\\obj\\",
+        "outputPath": "C:\\Users\\ctuna\\Documents\\gitHub\\IoB_revitMCP\\obj\\",
         "projectStyle": "PackageReference",
         "skipContentFileWrite": true,
         "UsingMicrosoftNETSdk": false,

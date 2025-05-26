@@ -9,3 +9,8 @@ C:\Users\ctuna\Documents\gitHub\RevitAddinDev\IoB_revitMCP\bin\x64\Release\Newto
 C:\Users\ctuna\Documents\gitHub\RevitAddinDev\IoB_revitMCP\obj\x64\Release\IoB_revi.BDA80A6E.Up2Date
 C:\Users\ctuna\AppData\Roaming\Autodesk\Revit\Addins\2023\IoB_revitMCP\IoB_revitMCP.dll
 C:\Users\ctuna\AppData\Roaming\Autodesk\Revit\Addins\2023\IoB_revitMCP\IoB_revitMCP.pdb
+C:\Users\ctuna\Documents\gitHub\IoB_revitMCP\obj\x64\Release\IoB_revitMCP.csproj.AssemblyReference.cache
+C:\Users\ctuna\Documents\gitHub\IoB_revitMCP\obj\x64\Release\IoB_revitMCP.csproj.CoreCompileInputs.cache
+C:\Users\ctuna\Documents\gitHub\IoB_revitMCP\obj\x64\Release\IoB_revitMCP.dll
+C:\Users\ctuna\Documents\gitHub\IoB_revitMCP\obj\x64\Release\IoB_revitMCP.pdb
+C:\Users\ctuna\Documents\gitHub\IoB_revitMCP\obj\x64\Release\IoB_revi.BDA80A6E.Up2Date

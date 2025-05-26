@@ -1,4 +1,4 @@
-﻿// RequestHandler.cs
+﻿// RequestHandler.cs - Updated to support ExecutePlan
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using IronPython.Hosting;
@@ -15,10 +15,13 @@ public class RequestHandler : IExternalEventHandler
     private string _requestBody;
     private HttpListenerContext _context;
 
-    private static readonly Dictionary<string, ICommand> CommandMap = new Dictionary<string, ICommand>
+    public static readonly Dictionary<string, ICommand> CommandMap = new Dictionary<string, ICommand>
     {
         { "GetParameters", new GetParametersCommand() },
-        { "ListElementsByCategory", new ListElementsCommand() }
+        { "FilterByParameter", new FilterByParameterCommand() },
+        { "ListElementsByCategory", new ListElementsCommand() },
+        { "ExecutePlan", new PlanExecutorCommand() },
+        { "AddViewFilter", new AddViewFilterCommand() }
     };
 
     public void SetRequest(string body, HttpListenerContext context)
@@ -38,7 +41,7 @@ public class RequestHandler : IExternalEventHandler
 
             if (request.ContainsKey("action") && CommandMap.ContainsKey(request["action"]))
             {
-                response = CommandMap[request["action"]].Execute(app, request);
+                response = CommandMap[request["action"].ToString()].Execute(app, request);
             }
             else if (request.ContainsKey("action") && request["action"] == "RunPython")
             {
