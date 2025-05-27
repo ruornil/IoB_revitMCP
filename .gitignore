@@ -1,0 +1,16 @@
+# Ignore log files
+*.log
+
+# Ignore temporary files
+*.tmp
+
+# Visual Studio specific files - VERY IMPORTANT
+.vs/
+
+# Build output folders
+[Bb]in/
+[Oo]bj/
+
+#ignore packages folder
+packages/
+ws-bridge/
