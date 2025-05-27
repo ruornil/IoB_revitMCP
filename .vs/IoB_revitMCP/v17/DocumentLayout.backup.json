@@ -3,8 +3,16 @@
   "WorkspaceRootPath": "C:\\Users\\ctuna\\Documents\\gitHub\\IoB_revitMCP\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{C6A9210F-85B5-41D2-BBCD-E97A883F3FFA}|IoB_revitMCP.csproj|c:\\users\\ctuna\\documents\\github\\iob_revitmcp\\addviewfiltercommand.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{C6A9210F-85B5-41D2-BBCD-E97A883F3FFA}|IoB_revitMCP.csproj|solutionrelative:addviewfiltercommand.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{C6A9210F-85B5-41D2-BBCD-E97A883F3FFA}|IoB_revitMCP.csproj|c:\\users\\ctuna\\documents\\github\\iob_revitmcp\\commands\\setparameters.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C6A9210F-85B5-41D2-BBCD-E97A883F3FFA}|IoB_revitMCP.csproj|solutionrelative:commands\\setparameters.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C6A9210F-85B5-41D2-BBCD-E97A883F3FFA}|IoB_revitMCP.csproj|c:\\users\\ctuna\\documents\\github\\iob_revitmcp\\core\\requesthandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C6A9210F-85B5-41D2-BBCD-E97A883F3FFA}|IoB_revitMCP.csproj|solutionrelative:core\\requesthandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C6A9210F-85B5-41D2-BBCD-E97A883F3FFA}|IoB_revitMCP.csproj|c:\\users\\ctuna\\documents\\github\\iob_revitmcp\\commands\\newsharedparameter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C6A9210F-85B5-41D2-BBCD-E97A883F3FFA}|IoB_revitMCP.csproj|solutionrelative:commands\\newsharedparameter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -19,14 +27,40 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "AddViewFilterCommand.cs",
-              "DocumentMoniker": "C:\\Users\\ctuna\\Documents\\gitHub\\IoB_revitMCP\\AddViewFilterCommand.cs",
-              "RelativeDocumentMoniker": "AddViewFilterCommand.cs",
-              "ToolTip": "C:\\Users\\ctuna\\Documents\\gitHub\\IoB_revitMCP\\AddViewFilterCommand.cs*",
-              "RelativeToolTip": "AddViewFilterCommand.cs*",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAJUAAAAAAAAAAAAAAA==",
+              "Title": "SetParameters.cs",
+              "DocumentMoniker": "C:\\Users\\ctuna\\Documents\\gitHub\\IoB_revitMCP\\Commands\\SetParameters.cs",
+              "RelativeDocumentMoniker": "Commands\\SetParameters.cs",
+              "ToolTip": "C:\\Users\\ctuna\\Documents\\gitHub\\IoB_revitMCP\\Commands\\SetParameters.cs",
+              "RelativeToolTip": "Commands\\SetParameters.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABIAAAApAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-05-26T21:49:20.96Z",
+              "WhenOpened": "2025-05-27T18:36:00.482Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "RequestHandler.cs",
+              "DocumentMoniker": "C:\\Users\\ctuna\\Documents\\gitHub\\IoB_revitMCP\\Core\\RequestHandler.cs",
+              "RelativeDocumentMoniker": "Core\\RequestHandler.cs",
+              "ToolTip": "C:\\Users\\ctuna\\Documents\\gitHub\\IoB_revitMCP\\Core\\RequestHandler.cs",
+              "RelativeToolTip": "Core\\RequestHandler.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAAsAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-27T13:25:32.569Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "NewSharedParameter.cs",
+              "DocumentMoniker": "C:\\Users\\ctuna\\Documents\\gitHub\\IoB_revitMCP\\Commands\\NewSharedParameter.cs",
+              "RelativeDocumentMoniker": "Commands\\NewSharedParameter.cs",
+              "ToolTip": "C:\\Users\\ctuna\\Documents\\gitHub\\IoB_revitMCP\\Commands\\NewSharedParameter.cs",
+              "RelativeToolTip": "Commands\\NewSharedParameter.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAHcAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-05-27T13:02:42.834Z",
               "EditorCaption": ""
             }
           ]

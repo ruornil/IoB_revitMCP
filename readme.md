@@ -15,23 +15,47 @@ This project implements a Model Context Protocol (MCP) server and command interf
 
 ## 📁 Project Structure
 
-| File                          | Purpose                                                                        |
-| ----------------------------- | ------------------------------------------------------------------------------ |
-| `App.cs`                      | Entry point for the Revit add-in. Starts and stops the MCP server.             |
-| `McpServer.cs`                | Initializes the HTTP listener and threads.                                     |
-| `RequestHandler.cs`           | Routes incoming requests to appropriate ICommand implementations.              |
-| `ICommand.cs`                 | Interface that all typed command classes implement.                            |
-| `GetParametersCommand.cs`     | Retrieves all parameters of a selected Revit element.                          |
-| `ListElementsCommand.cs`      | Lists Revit elements of a given category.                                      |
-| `FilterByParameterCommand.cs` | Filters a list of elements based on parameter value.                           |
-| `PlanExecutorCommand.cs`      | Executes a stepwise plan, enabling command chaining.                           |
-| `AddViewFilterCommand.cs`     | Creates view filters with visibility, color, line pattern, and fill overrides. |
-| `RevitHelpers.cs`             | Utility functions for element filtering and parameter setting.                 |
-| `UiHelpers.cs`                | Revit UI utilities (e.g., `TaskDialog`).                                       |
+| File                           | Purpose                                                                        |                                          |
+| ------------------------------ | ------------------------------------------------------------------------------ | ---------------------------------------- |
+| `App.cs`                       | Entry point for the Revit add-in. Starts and stops the MCP server.             |                                          |
+| `McpServer.cs`                 | Initializes the HTTP listener and threads.                                     |                                          |
+| `RequestHandler.cs`            | Routes incoming requests to appropriate ICommand implementations.              |                                          |
+| `ICommand.cs`                  | Interface that all typed command classes implement.                            |                                          |
+| `GetParametersCommand.cs`      | Retrieves all parameters of a selected Revit element.                          |                                          |
+| `ListElementsCommand.cs`       | Lists Revit elements of a given category.                                      |                                          |
+| `FilterByParameterCommand.cs`  | Filters a list of elements based on parameter value.                           |                                          |
+| `PlanExecutorCommand.cs`       | Executes a stepwise plan, enabling command chaining.                           |                                          |
+| `AddViewFilterCommand.cs`      | Creates view filters with visibility, color, line pattern, and fill overrides. |                                          |
+| `NewSharedParameterCommand.cs` | Creates and binds shared parameters from shared parameter file.                |                                          |
+| `SetParametersCommand.cs`      | Sets multiple parameters on one or more elements by ID or selection.           |                                          |
+| `RevitHelpers.cs`              | Utility functions for element filtering and parameter setting.                 |                                          |
+| `UiHelpers.cs`                 | Revit UI utilities (e.g., `TaskDialog`).                                       | Revit UI utilities (e.g., `TaskDialog`). |
 
 ---
 
 ## 🚀 Usage Examples
+
+### 🔹 Create and Bind a Shared Parameter
+
+```json
+{
+  "action": "NewSharedParameter",
+  "parameter_name": "Pset_WallCommon.AcousticRating[Type]",
+  "parameter_group": "PG_IFC",
+  "categories": "Walls",
+  "binding_type": "Type"
+}
+```
+
+### 🔹 Set Multiple Parameters on Selected or Targeted Elements
+
+```json
+{
+  "action": "SetParameters",
+  "element_ids": "[12345, 67890]",
+  "parameters": "{\"Mark\": \"Wall-A1\", \"Comments\": \"Checked\"}"
+}
+```
 
 ### 🔹 Create and Apply a View Filter
 

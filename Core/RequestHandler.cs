@@ -17,11 +17,12 @@ public class RequestHandler : IExternalEventHandler
 
     public static readonly Dictionary<string, ICommand> CommandMap = new Dictionary<string, ICommand>
     {
+        { "NewSharedParameter", new NewSharedParameterCommand() },
+        { "SetParameters", new SetParametersCommand() },
         { "GetParameters", new GetParametersCommand() },
         { "FilterByParameter", new FilterByParameterCommand() },
         { "ListElementsByCategory", new ListElementsCommand() },
-        { "ExecutePlan", new PlanExecutorCommand() },
-        { "AddViewFilter", new AddViewFilterCommand() }
+        { "ExecutePlan", new PlanExecutorCommand() }
     };
 
     public void SetRequest(string body, HttpListenerContext context)

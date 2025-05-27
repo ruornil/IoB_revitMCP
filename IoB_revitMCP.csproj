@@ -49,6 +49,9 @@
     <LangVersion>7.3</LangVersion>
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -74,18 +77,20 @@
     <PackageReference Include="IronPython" Version="2.7.11" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AddViewFilterCommand.cs" />
-    <Compile Include="App.cs" />
-    <Compile Include="FilterByParameterCommand.cs" />
-    <Compile Include="GetParametersCommand.cs" />
-    <Compile Include="ICommand.cs" />
-    <Compile Include="ListElementsCommand.cs" />
-    <Compile Include="McpServer.cs" />
-    <Compile Include="PlanExecutorCommand.cs" />
-    <Compile Include="RequestHandler.cs" />
+    <Compile Include="Commands\AddViewFilterCommand.cs" />
+    <Compile Include="Core\App.cs" />
+    <Compile Include="Commands\FilterByParameterCommand.cs" />
+    <Compile Include="Commands\GetParametersCommand.cs" />
+    <Compile Include="Core\ICommand.cs" />
+    <Compile Include="Commands\ListElementsCommand.cs" />
+    <Compile Include="Core\McpServer.cs" />
+    <Compile Include="Commands\PlanExecutorCommand.cs" />
+    <Compile Include="Core\RequestHandler.cs" />
+    <Compile Include="Commands\NewSharedParameter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RevitHelpers.cs" />
-    <Compile Include="UiHelpers.cs" />
+    <Compile Include="Helpers\RevitHelpers.cs" />
+    <Compile Include="Helpers\UiHelpers.cs" />
+    <Compile Include="Commands\SetParameters.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

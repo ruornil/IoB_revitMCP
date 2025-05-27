@@ -31,7 +31,6 @@ public class AddViewFilterCommand : ICommand
             var category = Category.GetCategory(doc, builtInCategory);
             if (category == null)
                 throw new Exception("Invalid category.");
-            throw new Exception("Invalid category.");
 
             var sampleElement = new FilteredElementCollector(doc)
                 .OfCategory(builtInCategory)
@@ -39,19 +38,16 @@ public class AddViewFilterCommand : ICommand
                 .FirstOrDefault();
             if (sampleElement == null)
                 throw new Exception("No element found in the specified category.");
-            throw new Exception("No element found in the specified category.");
 
             var param = sampleElement.Parameters
                 .Cast<Parameter>()
                 .FirstOrDefault(p => p.Definition?.Name == parameterName);
             if (param == null)
                 throw new Exception($"Parameter '{parameterName}' not found.");
-            throw new Exception($"Parameter '{parameterName}' not found.");
 
             var definition = param.Definition as InternalDefinition;
             if (definition == null)
                 throw new Exception("Only internal (built-in) parameters are supported.");
-            throw new Exception("Only internal (built-in) parameters are supported.");
 
             var paramId = definition.Id;
             FilterRule rule = null;
@@ -132,6 +128,58 @@ public class AddViewFilterCommand : ICommand
                     {
                         overrideGraphicSettings.SetSurfaceForegroundPatternId(fillPatternElem.Id);
                     }
+                }
+
+                // Optional: line weight override
+                if (input.TryGetValue("line_weight", out var lineWeightStr) && int.TryParse(lineWeightStr, out var lineWeight))
+                {
+                    overrideGraphicSettings.SetProjectionLineWeight(lineWeight);
+                }
+
+                // Optional: cut overrides
+                if (input.TryGetValue("cut_color", out var cutColorStr))
+                {
+                    var cutParts = cutColorStr.Split(',').Select(s => int.TryParse(s.Trim(), out var v) ? v : 0).ToArray();
+                    if (cutParts.Length == 3)
+                    {
+                        overrideGraphicSettings.SetCutLineColor(new Color((byte)cutParts[0], (byte)cutParts[1], (byte)cutParts[2]));
+                    }
+                }
+
+                if (input.TryGetValue("cut_fill_color", out var cutFillStr))
+                {
+                    var fillParts = cutFillStr.Split(',').Select(s => int.TryParse(s.Trim(), out var v) ? v : 0).ToArray();
+                    if (fillParts.Length == 3)
+                    {
+                        overrideGraphicSettings.SetCutForegroundPatternColor(new Color((byte)fillParts[0], (byte)fillParts[1], (byte)fillParts[2]));
+                    }
+                }
+
+                if (input.TryGetValue("cut_fill_pattern", out var cutFillPatternName))
+                {
+                    var cutPatternElem = new FilteredElementCollector(doc)
+                        .OfClass(typeof(FillPatternElement))
+                        .FirstOrDefault(e => e.Name.Equals(cutFillPatternName, StringComparison.OrdinalIgnoreCase)) as FillPatternElement;
+                    if (cutPatternElem != null)
+                    {
+                        overrideGraphicSettings.SetCutForegroundPatternId(cutPatternElem.Id);
+                    }
+                }
+
+                if (input.TryGetValue("cut_line_pattern", out var cutLinePatternName))
+                {
+                    var cutPatternElem = new FilteredElementCollector(doc)
+                        .OfClass(typeof(LinePatternElement))
+                        .FirstOrDefault(e => e.Name.Equals(cutLinePatternName, StringComparison.OrdinalIgnoreCase)) as LinePatternElement;
+                    if (cutPatternElem != null)
+                    {
+                        overrideGraphicSettings.SetCutLinePatternId(cutPatternElem.Id);
+                    }
+                }
+
+                if (input.TryGetValue("cut_line_weight", out var cutWeightStr) && int.TryParse(cutWeightStr, out var cutWeight))
+                {
+                    overrideGraphicSettings.SetCutLineWeight(cutWeight);
                 }
 
                 view.SetFilterOverrides(filter.Id, overrideGraphicSettings);
