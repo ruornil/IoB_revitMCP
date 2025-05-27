@@ -15,21 +15,21 @@ This project implements a Model Context Protocol (MCP) server and command interf
 
 ## 📁 Project Structure
 
-| File                           | Purpose                                                                        |                                          |
-| ------------------------------ | ------------------------------------------------------------------------------ | ---------------------------------------- |
-| `App.cs`                       | Entry point for the Revit add-in. Starts and stops the MCP server.             |                                          |
-| `McpServer.cs`                 | Initializes the HTTP listener and threads.                                     |                                          |
-| `RequestHandler.cs`            | Routes incoming requests to appropriate ICommand implementations.              |                                          |
-| `ICommand.cs`                  | Interface that all typed command classes implement.                            |                                          |
-| `GetParametersCommand.cs`      | Retrieves all parameters of a selected Revit element.                          |                                          |
-| `ListElementsCommand.cs`       | Lists Revit elements of a given category.                                      |                                          |
-| `FilterByParameterCommand.cs`  | Filters a list of elements based on parameter value.                           |                                          |
-| `PlanExecutorCommand.cs`       | Executes a stepwise plan, enabling command chaining.                           |                                          |
-| `AddViewFilterCommand.cs`      | Creates view filters with visibility, color, line pattern, and fill overrides. |                                          |
-| `NewSharedParameterCommand.cs` | Creates and binds shared parameters from shared parameter file.                |                                          |
-| `SetParametersCommand.cs`      | Sets multiple parameters on one or more elements by ID or selection.           |                                          |
-| `RevitHelpers.cs`              | Utility functions for element filtering and parameter setting.                 |                                          |
-| `UiHelpers.cs`                 | Revit UI utilities (e.g., `TaskDialog`).                                       | Revit UI utilities (e.g., `TaskDialog`). |
+| File                           | Purpose                                                                        |
+| ------------------------------ | ------------------------------------------------------------------------------ |
+| `App.cs`                       | Entry point for the Revit add-in. Starts and stops the MCP server.             |
+| `McpServer.cs`                 | Initializes the HTTP listener and threads.                                     |
+| `RequestHandler.cs`            | Routes incoming requests to appropriate ICommand implementations.              |
+| `ICommand.cs`                  | Interface that all typed command classes implement.                            |
+| `GetParametersCommand.cs`      | Retrieves all parameters of a selected Revit element.                          |
+| `ListElementsCommand.cs`       | Lists Revit elements of a given category.                                      |
+| `FilterByParameterCommand.cs`  | Filters a list of elements based on parameter value.                           |
+| `PlanExecutorCommand.cs`       | Executes a stepwise plan, enabling command chaining.                           |
+| `AddViewFilterCommand.cs`      | Creates view filters with visibility, color, line pattern, and fill overrides. |
+| `NewSharedParameterCommand.cs` | Creates and binds shared parameters from shared parameter file.                |
+| `SetParametersCommand.cs`      | Sets multiple parameters on one or more elements by ID or selection.           |
+| `RevitHelpers.cs`              | Utility functions for element filtering and parameter setting.                 |
+| `UiHelpers.cs`                 | Revit UI utilities (e.g., `TaskDialog`).                                       |
 
 ---
 
