@@ -14,3 +14,6 @@
 #ignore packages folder
 packages/
 ws-bridge/
+
+#ignore AI agent prompts
+agentPrompts.md

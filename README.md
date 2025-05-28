@@ -96,6 +96,13 @@ This project implements a Model Context Protocol (MCP) server and command interf
 
 ---
 
-## 📄 License
+## License
 
-MIT License.
+This project is licensed under the [Apache License 2.0](./LICENSE).
+
+It includes contributions assisted by OpenAI's ChatGPT and uses Autodesk Revit API (which is proprietary and not included in this repository).
+
+See the [NOTICE](./NOTICE) file for attribution and licensing notes.
+
+You are free to use, modify, and distribute this code commercially or privately, as long as you include proper attribution and comply with the Apache 2.0 terms.
+

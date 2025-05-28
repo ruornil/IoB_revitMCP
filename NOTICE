@@ -1,0 +1,9 @@
+This project includes code developed with the assistance of OpenAI's ChatGPT and relies on Autodesk Revit API, which is proprietary to Autodesk, Inc.
+
+All original code in this repository is licensed under the Apache License, Version 2.0.
+
+You may not include Autodesk Revit DLLs or redistribute any Autodesk binaries. This plugin requires a licensed copy of Autodesk Revit to run.
+
+Contributors:
+- M. Cenk Tunaboylu (Project owner and developer)
+- OpenAI GPT-4 (assisted code generation and documentation)
