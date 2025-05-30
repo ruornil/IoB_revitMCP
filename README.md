@@ -15,12 +15,15 @@ This project implements a Model Context Protocol (MCP) server and command interf
 
 ## 📁 Project Structure
 
-| File                           | Purpose                                                                        |
+| Core Files                     | Purpose                                                                        |
 | ------------------------------ | ------------------------------------------------------------------------------ |
 | `App.cs`                       | Entry point for the Revit add-in. Starts and stops the MCP server.             |
 | `McpServer.cs`                 | Initializes the HTTP listener and threads.                                     |
 | `RequestHandler.cs`            | Routes incoming requests to appropriate ICommand implementations.              |
 | `ICommand.cs`                  | Interface that all typed command classes implement.                            |
+
+| Command Files                  | Purpose                                                                        |
+| ------------------------------ | ------------------------------------------------------------------------------ |
 | `GetParametersCommand.cs`      | Retrieves all parameters of a selected Revit element.                          |
 | `ListElementsCommand.cs`       | Lists Revit elements of a given category.                                      |
 | `FilterByParameterCommand.cs`  | Filters a list of elements based on parameter value.                           |
@@ -28,12 +31,37 @@ This project implements a Model Context Protocol (MCP) server and command interf
 | `AddViewFilterCommand.cs`      | Creates view filters with visibility, color, line pattern, and fill overrides. |
 | `NewSharedParameterCommand.cs` | Creates and binds shared parameters from shared parameter file.                |
 | `SetParametersCommand.cs`      | Sets multiple parameters on one or more elements by ID or selection.           |
+| `PlaceViewsOnSheetCommand.cs`  | Places views on a Revit sheet, stacking them from bottom-right up.             |
+| `CreateSheetCommand.cs`        | Creates a new sheet using a specified title block.                             |
+
+| Helper Files                   | Purpose                                                                        |
+| ------------------------------ | ------------------------------------------------------------------------------ |
 | `RevitHelpers.cs`              | Utility functions for element filtering and parameter setting.                 |
 | `UiHelpers.cs`                 | Revit UI utilities (e.g., `TaskDialog`).                                       |
 
 ---
 
 ## 🚀 Usage Examples
+
+### 🔹 Create a New Sheet
+
+```json
+{
+  "action": "CreateSheet",
+  "title_block_name": "A1 1024 x 768mm"
+}
+```
+
+### 🔹 Place Views on a Sheet
+
+```json
+{
+  "action": "PlaceViewsOnSheet",
+  "sheet_id": "1108327",
+  "view_ids": "744829,744830",
+  "offsetRight": "120"
+}
+```
 
 ### 🔹 Create and Bind a Shared Parameter
 
@@ -93,16 +121,16 @@ This project implements a Model Context Protocol (MCP) server and command interf
 * ✅ C# 7.3 compatibility enforced
 * ✅ Removed IronPython scripting (future feature)
 * ✅ `OverrideGraphicSettings` supports projection color, line pattern, fill color, and fill pattern
+* ✅ Views are placed on sheets in columns starting from bottom-right, going top-left.
 
 ---
 
-## License
+## 📄 License
 
-This project is licensed under the [Apache License 2.0](./LICENSE).
+This project is licensed under the Apache License 2.0.
 
 It includes contributions assisted by OpenAI's ChatGPT and uses Autodesk Revit API (which is proprietary and not included in this repository).
 
-See the [NOTICE](./NOTICE) file for attribution and licensing notes.
+See the NOTICE file for attribution and licensing notes.
 
 You are free to use, modify, and distribute this code commercially or privately, as long as you include proper attribution and comply with the Apache 2.0 terms.
-

@@ -17,6 +17,8 @@ public class RequestHandler : IExternalEventHandler
 
     public static readonly Dictionary<string, ICommand> CommandMap = new Dictionary<string, ICommand>
     {
+        { "CreateSheet" , new CreateSheetCommand() },
+        { "PlaceViewsOnSheet", new PlaceViewsOnSheetCommand() },
         { "NewSharedParameter", new NewSharedParameterCommand() },
         { "SetParameters", new SetParametersCommand() },
         { "GetParameters", new GetParametersCommand() },
