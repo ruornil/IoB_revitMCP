@@ -5,6 +5,7 @@ using IronPython.Hosting;
 using Microsoft.Scripting.Hosting;
 using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
 using System.Text;
@@ -12,8 +13,8 @@ using System;
 
 public class RequestHandler : IExternalEventHandler
 {
-    private string _requestBody;
-    private HttpListenerContext _context;
+    private readonly ConcurrentQueue<(string body, HttpListenerContext ctx)> _requests
+        = new ConcurrentQueue<(string body, HttpListenerContext ctx)>();
 
     public static readonly Dictionary<string, ICommand> CommandMap = new Dictionary<string, ICommand>
     {
@@ -29,18 +30,22 @@ public class RequestHandler : IExternalEventHandler
 
     public void SetRequest(string body, HttpListenerContext context)
     {
-        _requestBody = body;
-        _context = context;
+        _requests.Enqueue((body, context));
     }
 
     public void Execute(UIApplication app)
     {
-        var doc = app.ActiveUIDocument?.Document;
-        var response = new Dictionary<string, object>();
+        while (_requests.TryDequeue(out var req))
+        {
+            var requestBody = req.body;
+            var context = req.ctx;
+
+            var doc = app.ActiveUIDocument?.Document;
+            var response = new Dictionary<string, object>();
 
         try
         {
-            var request = JsonConvert.DeserializeObject<Dictionary<string, string>>(_requestBody);
+            var request = JsonConvert.DeserializeObject<Dictionary<string, string>>(requestBody);
 
             if (request.ContainsKey("action") && CommandMap.ContainsKey(request["action"]))
             {
@@ -82,9 +87,10 @@ public class RequestHandler : IExternalEventHandler
 
         string json = JsonConvert.SerializeObject(response);
         byte[] buffer = Encoding.UTF8.GetBytes(json);
-        _context.Response.ContentType = "application/json";
-        _context.Response.OutputStream.Write(buffer, 0, buffer.Length);
-        _context.Response.Close();
+            context.Response.ContentType = "application/json";
+            context.Response.OutputStream.Write(buffer, 0, buffer.Length);
+            context.Response.Close();
+        }
     }
 
     public string GetName() => "MCP Request Handler";

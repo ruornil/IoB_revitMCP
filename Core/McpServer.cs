@@ -43,7 +43,11 @@ public static class McpServer
                 reader.Close();
 
                 _handler.SetRequest(requestBody, context);
-                _externalEvent.Raise();
+                try
+                {
+                    _externalEvent.Raise();
+                }
+                catch { }
             }
             catch { }
         }
