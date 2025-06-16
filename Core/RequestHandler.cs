@@ -25,7 +25,8 @@ public class RequestHandler : IExternalEventHandler
         { "GetParameters", new GetParametersCommand() },
         { "FilterByParameter", new FilterByParameterCommand() },
         { "ListElementsByCategory", new ListElementsCommand() },
-        { "ExecutePlan", new PlanExecutorCommand() }
+        { "ExecutePlan", new PlanExecutorCommand() },
+        { "AddViewFilter", new AddViewFilterCommand()}
     };
 
     public void SetRequest(string body, HttpListenerContext context)
