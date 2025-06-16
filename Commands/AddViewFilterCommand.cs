@@ -27,7 +27,7 @@ public class AddViewFilterCommand : ICommand
                 return response;
             }
 
-            var builtInCategory = (BuiltInCategory)Enum.Parse(typeof(BuiltInCategory), "OST_" + categoryName, true);
+            var builtInCategory = CategoryUtils.ParseBuiltInCategory(categoryName);
             var category = Category.GetCategory(doc, builtInCategory);
             if (category == null)
                 throw new Exception("Invalid category.");

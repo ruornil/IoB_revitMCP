@@ -14,7 +14,7 @@ public class ListElementsCommand : ICommand
         string categoryName = input.ContainsKey("category") ? input["category"] : "Walls";
 
         var collector = new FilteredElementCollector(doc)
-            .OfCategory((BuiltInCategory)Enum.Parse(typeof(BuiltInCategory), "OST_" + categoryName, true))
+            .OfCategory(CategoryUtils.ParseBuiltInCategory(categoryName))
             .WhereElementIsNotElementType();
 
         var elements = collector.Select(e => new { Id = e.Id.IntegerValue, Name = e.Name }).ToList();
