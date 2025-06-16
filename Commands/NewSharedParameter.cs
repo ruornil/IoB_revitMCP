@@ -67,46 +67,44 @@ public class NewSharedParameterCommand : ICommand
             var paramGroup = Enum.TryParse<BuiltInParameterGroup>(paramGroupName, out var group) ? group : BuiltInParameterGroup.PG_DATA;
 
             // Target categories
-            var categoryNames = categoriesStr.Split(',').Select(s => s.Trim());
+            var categoryNames = categoriesStr.Split(',').Select(s => s.Trim()).ToList();
             var catSet = new CategorySet();
 
             foreach (var catName in categoryNames)
             {
-                if (Enum.IsDefined(typeof(BuiltInCategory), "OST_" + catName))
-                {
-                    var bic = (BuiltInCategory)Enum.Parse(typeof(BuiltInCategory), "OST_" + catName);
-                    {
-                        var cat = doc.Settings.Categories.get_Item(bic);
-                        if (cat != null) catSet.Insert(cat);
-                    }
-                }
+                if (!Enum.IsDefined(typeof(BuiltInCategory), "OST_" + catName))
+                    continue;
 
-                using (var tx = new Transaction(doc, "Bind Shared Parameter"))
-                {
-                    tx.Start();
-
-                    ElementBinding binding;
-                    if (doc.ParameterBindings.Contains(definition))
-                    {
-                        binding = doc.ParameterBindings.get_Item(definition) as ElementBinding;
-                    }
-                    else
-                    {
-                        if (bindingType.Equals("Type", StringComparison.OrdinalIgnoreCase))
-                            binding = doc.Application.Create.NewTypeBinding(catSet);
-                        else
-                            binding = doc.Application.Create.NewInstanceBinding(catSet);
-                    }
-
-                    doc.ParameterBindings.Remove(definition);
-                    doc.ParameterBindings.Insert(definition, binding, paramGroup);
-                    tx.Commit();
-                }
-
-                response["status"] = "success";
-                response["parameter"] = paramName;
-                response["categories"] = categoryNames.ToList();
+                var bic = (BuiltInCategory)Enum.Parse(typeof(BuiltInCategory), "OST_" + catName);
+                var cat = doc.Settings.Categories.get_Item(bic);
+                if (cat != null) catSet.Insert(cat);
             }
+
+            using (var tx = new Transaction(doc, "Bind Shared Parameter"))
+            {
+                tx.Start();
+
+                ElementBinding binding;
+                if (doc.ParameterBindings.Contains(definition))
+                {
+                    binding = doc.ParameterBindings.get_Item(definition) as ElementBinding;
+                }
+                else
+                {
+                    if (bindingType.Equals("Type", StringComparison.OrdinalIgnoreCase))
+                        binding = doc.Application.Create.NewTypeBinding(catSet);
+                    else
+                        binding = doc.Application.Create.NewInstanceBinding(catSet);
+                }
+
+                doc.ParameterBindings.Remove(definition);
+                doc.ParameterBindings.Insert(definition, binding, paramGroup);
+                tx.Commit();
+            }
+
+            response["status"] = "success";
+            response["parameter"] = paramName;
+            response["categories"] = categoryNames;
         }
         catch (Exception ex)
         {
