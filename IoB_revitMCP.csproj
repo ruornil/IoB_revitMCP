@@ -79,6 +79,7 @@
   <ItemGroup>
     <Compile Include="Commands\AddViewFilterCommand.cs" />
     <Compile Include="Commands\CreateSheetCommand.cs" />
+    <Compile Include="Commands\GetParametersByID.cs" />
     <Compile Include="Commands\PlaceViewsOnSheet.cs" />
     <Compile Include="Core\App.cs" />
     <Compile Include="Commands\FilterByParameterCommand.cs" />

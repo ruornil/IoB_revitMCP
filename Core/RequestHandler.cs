@@ -10,6 +10,7 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System;
+using IoB_revitMCP;
 
 public class RequestHandler : IExternalEventHandler
 {
@@ -23,6 +24,7 @@ public class RequestHandler : IExternalEventHandler
         { "NewSharedParameter", new NewSharedParameterCommand() },
         { "SetParameters", new SetParametersCommand() },
         { "GetParameters", new GetParametersCommand() },
+        { "GetParametersByID", new GetParametersByIdCommand() },
         { "FilterByParameter", new FilterByParameterCommand() },
         { "ListElementsByCategory", new ListElementsCommand() },
         { "ExecutePlan", new PlanExecutorCommand() },

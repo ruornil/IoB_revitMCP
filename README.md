@@ -25,6 +25,7 @@ This project implements a Model Context Protocol (MCP) server and command interf
 | Command Files                  | Purpose                                                                        |
 | ------------------------------ | ------------------------------------------------------------------------------ |
 | `GetParametersCommand.cs`      | Retrieves all parameters of a selected Revit element.                          |
+| `GetParametersByIDCommand.cs`      | Retrieves all parameters of Revit Elements selected by ID.                          |
 | `ListElementsCommand.cs`       | Lists Revit elements of a given category.                                      |
 | `FilterByParameterCommand.cs`  | Filters a list of elements based on parameter value.                           |
 | `PlanExecutorCommand.cs`       | Executes a stepwise plan, enabling command chaining.                           |
@@ -42,6 +43,22 @@ This project implements a Model Context Protocol (MCP) server and command interf
 ---
 
 ## 🚀 Usage Examples
+
+### 🔹 Get Parameters
+
+```json
+{
+  "action": "GetParameters"
+}
+```
+### 🔹 Get Parameters By ID
+
+```json
+{
+  "action": "GetParametersById",
+  "element_ids": "123456,789012"
+}
+```
 
 ### 🔹 Create a New Sheet
 

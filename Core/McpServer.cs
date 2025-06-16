@@ -1,9 +1,10 @@
-// McpServer.cs - Minimal HTTP listener (async)
+// McpServer.cs - Minimal HTTP listener (async) 
 using System;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Autodesk.Revit.UI;
+using System.IO;
 
 public static class McpServer
 {
@@ -55,9 +56,10 @@ public static class McpServer
 
     private static async Task ProcessRequestAsync(HttpListenerContext context)
     {
+        StreamReader reader = null;
         try
         {
-            using var reader = new System.IO.StreamReader(context.Request.InputStream);
+            reader = new StreamReader(context.Request.InputStream);
             string requestBody = await reader.ReadToEndAsync();
 
             _handler.SetRequest(requestBody, context);
@@ -75,13 +77,18 @@ public static class McpServer
             }
             catch { }
         }
+        finally
+        {
+            if (reader != null)
+                reader.Dispose();
+        }
     }
 
     private static void LogError(string message)
     {
         try
         {
-            System.IO.File.AppendAllText("mcp.log",
+            File.AppendAllText("mcp.log",
                 $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {message}{Environment.NewLine}");
         }
         catch { }
