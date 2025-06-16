@@ -91,6 +91,7 @@
     <Compile Include="Commands\NewSharedParameter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Helpers\RevitHelpers.cs" />
+    <Compile Include="Helpers\CategoryUtils.cs" />
     <Compile Include="Helpers\UiHelpers.cs" />
     <Compile Include="Commands\SetParameters.cs" />
   </ItemGroup>

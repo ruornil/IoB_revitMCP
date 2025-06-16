@@ -8,7 +8,7 @@ public static class RevitHelpers
 {
     public static List<Element> GetElementsByCategory(Document doc, string categoryName)
     {
-        var bic = (BuiltInCategory)Enum.Parse(typeof(BuiltInCategory), "OST_" + categoryName);
+        var bic = CategoryUtils.ParseBuiltInCategory(categoryName);
         return new FilteredElementCollector(doc)
             .OfCategory(bic)
             .WhereElementIsNotElementType()
