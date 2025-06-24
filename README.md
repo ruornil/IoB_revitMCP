@@ -39,6 +39,7 @@ This project implements a Model Context Protocol (MCP) server and command interf
 | `PlaceViewsOnSheet.cs`         | Places views on a Revit sheet, stacking them from bottom-right up. |
 | `PlanExecutorCommand.cs`       | Executes a stepwise plan, enabling command chaining. |
 | `SetParameters.cs`             | Sets multiple parameters on one or more elements by ID or selection. |
+
 | Helper Files                   | Purpose                                                                        |
 | ------------------------------ | ------------------------------------------------------------------------------ |
 | `RevitHelpers.cs`              | Utility functions for element filtering and parameter setting.                 |
