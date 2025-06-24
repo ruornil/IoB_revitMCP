@@ -24,13 +24,17 @@ This project implements a Model Context Protocol (MCP) server and command interf
 
 | Command Files                  | Purpose                                                                        |
 | ------------------------------ | ------------------------------------------------------------------------------ |
-| `GetParametersCommand.cs`      | Retrieves all parameters of a selected Revit element.                          |
-| `GetParametersByIDCommand.cs`      | Retrieves all parameters of Revit Elements selected by ID.                          |
+| `GetElementParametersCommand.cs`      | Retrieves parameters for one or more Revit elements.                          |
 | `ListElementsCommand.cs`       | Lists Revit elements of a given category.                                      |
 | `FilterByParameterCommand.cs`  | Filters a list of elements based on parameter value.                           |
 | `PlanExecutorCommand.cs`       | Executes a stepwise plan, enabling command chaining.                           |
 | `AddViewFilterCommand.cs`      | Creates view filters with visibility, color, line pattern, and fill overrides. |
+| `ChangeFamilyAndType.cs`       | Changes both family and type of multiple elements.                              |
+| `ExportToJsonCommand.cs`       | Exports selected categories and element parameters to JSON.                     |
+| `GetFamiliesAndTypesCommand.cs` | Lists all family/type combinations, optionally filtered by class.              |
 | `NewSharedParameterCommand.cs` | Creates and binds shared parameters from shared parameter file.                |
+| `GetProjectInfo.cs`            | Retrieves model metadata and project information.                              |
+| `GetProjectParametersCommand.cs` | Lists project parameters and their bindings.                                   |
 | `SetParametersCommand.cs`      | Sets multiple parameters on one or more elements by ID or selection.           |
 | `PlaceViewsOnSheetCommand.cs`  | Places views on a Revit sheet, stacking them from bottom-right up.             |
 | `CreateSheetCommand.cs`        | Creates a new sheet using a specified title block.                             |
@@ -44,18 +48,11 @@ This project implements a Model Context Protocol (MCP) server and command interf
 
 ## 🚀 Usage Examples
 
-### 🔹 Get Parameters
+### 🔹 Get Element Parameters
 
 ```json
 {
-  "action": "GetParameters"
-}
-```
-### 🔹 Get Parameters By ID
-
-```json
-{
-  "action": "GetParametersById",
+  "action": "GetElementParameters",
   "element_ids": "123456,789012"
 }
 ```
@@ -99,6 +96,22 @@ This project implements a Model Context Protocol (MCP) server and command interf
   "action": "SetParameters",
   "element_ids": "[12345, 67890]",
   "parameters": "{\"Mark\": \"Wall-A1\", \"Comments\": \"Checked\"}"
+}
+```
+### 🔹 Get Project Info
+
+```json
+{
+  "action": "GetProjectInfo"
+}
+```
+
+### 🔹 Export Elements to JSON
+
+```json
+{
+  "action": "ExportToJson",
+  "categories": "Walls,Doors"
 }
 ```
 
