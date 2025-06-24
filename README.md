@@ -22,19 +22,23 @@ This project implements a Model Context Protocol (MCP) server and command interf
 | `RequestHandler.cs`            | Routes incoming requests to appropriate ICommand implementations.              |
 | `ICommand.cs`                  | Interface that all typed command classes implement.                            |
 
-| Command Files                  | Purpose                                                                        |
-| ------------------------------ | ------------------------------------------------------------------------------ |
-| `GetParametersCommand.cs`      | Retrieves all parameters of a selected Revit element.                          |
-| `GetParametersByIDCommand.cs`      | Retrieves all parameters of Revit Elements selected by ID.                          |
-| `ListElementsCommand.cs`       | Lists Revit elements of a given category.                                      |
-| `FilterByParameterCommand.cs`  | Filters a list of elements based on parameter value.                           |
-| `PlanExecutorCommand.cs`       | Executes a stepwise plan, enabling command chaining.                           |
+| Command Files                  | Purpose |
+| ------------------------------ | -------------------------------------------------------------------------------- |
 | `AddViewFilterCommand.cs`      | Creates view filters with visibility, color, line pattern, and fill overrides. |
-| `NewSharedParameterCommand.cs` | Creates and binds shared parameters from shared parameter file.                |
-| `SetParametersCommand.cs`      | Sets multiple parameters on one or more elements by ID or selection.           |
-| `PlaceViewsOnSheetCommand.cs`  | Places views on a Revit sheet, stacking them from bottom-right up.             |
-| `CreateSheetCommand.cs`        | Creates a new sheet using a specified title block.                             |
-
+| `ChangeFamilyAndType.cs`       | Changes the family and type for elements. |
+| `CreateSheetCommand.cs`        | Creates a new sheet using a specified title block. |
+| `ExportToJsonCommand.cs`       | Exports elements and their parameters to JSON. |
+| `FilterByParameterCommand.cs`  | Filters a list of elements based on parameter value. |
+| `GetFamiliesAndTypesCommand.cs` | Lists all families and their types in the model. |
+| `GetParametersCommand.cs`      | Retrieves all parameters of a selected Revit element. |
+| `GetParametersByID.cs`         | Retrieves all parameters of Revit elements selected by ID. |
+| `GetProjectInfo.cs`            | Retrieves model-level metadata such as name and save time. |
+| `GetProjectParametersCommand.cs` | Retrieves all project parameters and their metadata. |
+| `ListElementsCommand.cs`       | Lists Revit elements of a given category. |
+| `NewSharedParameter.cs`        | Creates and binds shared parameters from shared parameter file. |
+| `PlaceViewsOnSheet.cs`         | Places views on a Revit sheet, stacking them from bottom-right up. |
+| `PlanExecutorCommand.cs`       | Executes a stepwise plan, enabling command chaining. |
+| `SetParameters.cs`             | Sets multiple parameters on one or more elements by ID or selection. |
 | Helper Files                   | Purpose                                                                        |
 | ------------------------------ | ------------------------------------------------------------------------------ |
 | `RevitHelpers.cs`              | Utility functions for element filtering and parameter setting.                 |
