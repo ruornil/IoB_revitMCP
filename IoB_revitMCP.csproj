@@ -86,7 +86,6 @@
     <Compile Include="Commands\PlaceViewsOnSheet.cs" />
     <Compile Include="Core\App.cs" />
     <Compile Include="Commands\FilterByParameterCommand.cs" />
-    <Compile Include="Commands\ChangeFamilyAndType.cs" />
     <Compile Include="Commands\GetElementParametersCommand.cs" />
     <Compile Include="Core\ICommand.cs" />
     <Compile Include="Commands\ListElementsCommand.cs" />
@@ -98,7 +97,6 @@
     <Compile Include="Helpers\RevitHelpers.cs" />
     <Compile Include="Helpers\CategoryUtils.cs" />
     <Compile Include="Helpers\UiHelpers.cs" />
-    <Compile Include="Commands\SetParameters.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
