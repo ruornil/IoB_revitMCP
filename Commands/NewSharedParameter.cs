@@ -72,10 +72,10 @@ public class NewSharedParameterCommand : ICommand
 
             foreach (var catName in categoryNames)
             {
-                if (!Enum.IsDefined(typeof(BuiltInCategory), "OST_" + catName))
+                if (!Enum.IsDefined(typeof(BuiltInCategory), catName))
                     continue;
 
-                var bic = (BuiltInCategory)Enum.Parse(typeof(BuiltInCategory), "OST_" + catName);
+                var bic = (BuiltInCategory)Enum.Parse(typeof(BuiltInCategory), catName);
                 var cat = doc.Settings.Categories.get_Item(bic);
                 if (cat != null) catSet.Insert(cat);
             }

@@ -28,7 +28,12 @@ public class RequestHandler : IExternalEventHandler
         { "FilterByParameter", new FilterByParameterCommand() },
         { "ListElementsByCategory", new ListElementsCommand() },
         { "ExecutePlan", new PlanExecutorCommand() },
-        { "AddViewFilter", new AddViewFilterCommand()}
+        { "AddViewFilter", new AddViewFilterCommand()},
+        { "ChangeFamilyAndType", new ChangeFamilyAndType()},
+        { "GetFamilyAndTypes", new GetFamiliesAndTypesCommand()},
+        { "GetProjectInfo", new GetProjectInfoCommand()},
+        { "GetProjectParameters", new GetProjectParametersCommand()},
+        { "ExportToJson" , new ExportToJsonCommand() }
     };
 
     public void SetRequest(string body, HttpListenerContext context)
