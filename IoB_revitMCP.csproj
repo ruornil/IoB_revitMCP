@@ -82,7 +82,7 @@
     <Compile Include="Commands\ExportToJsonCommand.cs" />
     <Compile Include="Commands\GetFamiliesAndTypesCommand.cs" />
     <Compile Include="Commands\GetParametersByID.cs" />
-    <Compile Include="Commands\GetProjectParametersCommand.cs" />
+    <Compile Include="Commands\GetModelContextCommand.cs" />
     <Compile Include="Commands\PlaceViewsOnSheet.cs" />
     <Compile Include="Core\App.cs" />
     <Compile Include="Commands\FilterByParameterCommand.cs" />
@@ -94,7 +94,6 @@
     <Compile Include="Commands\PlanExecutorCommand.cs" />
     <Compile Include="Core\RequestHandler.cs" />
     <Compile Include="Commands\NewSharedParameter.cs" />
-    <Compile Include="Commands\GetProjectInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Helpers\RevitHelpers.cs" />
     <Compile Include="Helpers\CategoryUtils.cs" />

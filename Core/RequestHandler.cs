@@ -31,8 +31,7 @@ public class RequestHandler : IExternalEventHandler
         { "AddViewFilter", new AddViewFilterCommand()},
         { "ChangeFamilyAndType", new ChangeFamilyAndType()},
         { "GetFamilyAndTypes", new GetFamiliesAndTypesCommand()},
-        { "GetProjectInfo", new GetProjectInfoCommand()},
-        { "GetProjectParameters", new GetProjectParametersCommand()},
+        { "GetModelContext", new GetModelContextCommand()},
         { "ExportToJson" , new ExportToJsonCommand() }
     };
 
