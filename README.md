@@ -32,8 +32,7 @@ This project implements a Model Context Protocol (MCP) server and command interf
 | `FilterByParameterCommand.cs`  | Filters a list of elements based on parameter value. |
 | `GetFamiliesAndTypesCommand.cs` | Lists all families and their types in the model. |
 | `GetElementParametersCommand.cs`      | Retrieves parameters for one or more Revit elements.                          |
-| `GetProjectInfo.cs`            | Retrieves model-level metadata such as name and save time. |
-| `GetProjectParametersCommand.cs` | Retrieves all project parameters and their metadata. |
+| `GetModelContext.cs`            | Retrieves model-level metadata such as name and save time and all project parameters and their metadata. |
 | `ListElementsCommand.cs`       | Lists Revit elements of a given category. |
 | `NewSharedParameter.cs`        | Creates and binds shared parameters from shared parameter file. |
 | `PlaceViewsOnSheet.cs`         | Places views on a Revit sheet, stacking them from bottom-right up. |
