@@ -81,13 +81,12 @@
     <Compile Include="Commands\CreateSheetCommand.cs" />
     <Compile Include="Commands\ExportToJsonCommand.cs" />
     <Compile Include="Commands\GetFamiliesAndTypesCommand.cs" />
-    <Compile Include="Commands\GetParametersByID.cs" />
     <Compile Include="Commands\GetModelContextCommand.cs" />
     <Compile Include="Commands\PlaceViewsOnSheet.cs" />
     <Compile Include="Core\App.cs" />
     <Compile Include="Commands\FilterByParameterCommand.cs" />
     <Compile Include="Commands\ChangeFamilyAndType.cs" />
-    <Compile Include="Commands\GetParametersCommand.cs" />
+    <Compile Include="Commands\GetElementParametersCommand.cs" />
     <Compile Include="Core\ICommand.cs" />
     <Compile Include="Commands\ListElementsCommand.cs" />
     <Compile Include="Core\McpServer.cs" />
