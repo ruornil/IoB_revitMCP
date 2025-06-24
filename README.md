@@ -22,6 +22,7 @@ This project implements a Model Context Protocol (MCP) server and command interf
 | `RequestHandler.cs`            | Routes incoming requests to appropriate ICommand implementations.              |
 | `ICommand.cs`                  | Interface that all typed command classes implement.                            |
 
+
 | Command Files                  | Purpose |
 | ------------------------------ | -------------------------------------------------------------------------------- |
 | `AddViewFilterCommand.cs`      | Creates view filters with visibility, color, line pattern, and fill overrides. |
@@ -30,8 +31,7 @@ This project implements a Model Context Protocol (MCP) server and command interf
 | `ExportToJsonCommand.cs`       | Exports elements and their parameters to JSON. |
 | `FilterByParameterCommand.cs`  | Filters a list of elements based on parameter value. |
 | `GetFamiliesAndTypesCommand.cs` | Lists all families and their types in the model. |
-| `GetParametersCommand.cs`      | Retrieves all parameters of a selected Revit element. |
-| `GetParametersByID.cs`         | Retrieves all parameters of Revit elements selected by ID. |
+| `GetElementParametersCommand.cs`      | Retrieves parameters for one or more Revit elements.                          |
 | `GetProjectInfo.cs`            | Retrieves model-level metadata such as name and save time. |
 | `GetProjectParametersCommand.cs` | Retrieves all project parameters and their metadata. |
 | `ListElementsCommand.cs`       | Lists Revit elements of a given category. |
@@ -49,18 +49,11 @@ This project implements a Model Context Protocol (MCP) server and command interf
 
 ## 🚀 Usage Examples
 
-### 🔹 Get Parameters
+### 🔹 Get Element Parameters
 
 ```json
 {
-  "action": "GetParameters"
-}
-```
-### 🔹 Get Parameters By ID
-
-```json
-{
-  "action": "GetParametersById",
+  "action": "GetElementParameters",
   "element_ids": "123456,789012"
 }
 ```
@@ -104,6 +97,22 @@ This project implements a Model Context Protocol (MCP) server and command interf
   "action": "SetParameters",
   "element_ids": "[12345, 67890]",
   "parameters": "{\"Mark\": \"Wall-A1\", \"Comments\": \"Checked\"}"
+}
+```
+### 🔹 Get Project Info
+
+```json
+{
+  "action": "GetProjectInfo"
+}
+```
+
+### 🔹 Export Elements to JSON
+
+```json
+{
+  "action": "ExportToJson",
+  "categories": "Walls,Doors"
 }
 ```
 
