@@ -232,7 +232,7 @@ may return in the future.
 * ✅ Removed IronPython scripting (future feature)
 * ✅ `OverrideGraphicSettings` supports projection color, line pattern, fill color, and fill pattern
 * ✅ Views are placed on sheets in columns starting from bottom-right, going top-left.
-
+* ✅ PostgreSQL tables will be populated, maintained with model data, and queried to control AI agent token use
 ---
 
 ## 📄 License

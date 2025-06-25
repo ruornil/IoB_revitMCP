@@ -32,7 +32,6 @@ public class ListCategoriesCommand : ICommand
                 item["enum"] = cat.Id.IntegerValue;
                 item["name"] = cat.Name;
                 item["group"] = cat.CategoryType.ToString();
-                try { item["description"] = cat.Description; } catch { item["description"] = string.Empty; }
                 item["guid"] = cat.Id.IntegerValue.ToString();
                 categories.Add(item);
 
