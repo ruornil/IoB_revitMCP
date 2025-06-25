@@ -1,6 +1,10 @@
 # Revit MCP Plugin
 
-This project implements a Model Context Protocol (MCP) server and command interface for Autodesk Revit, enabling typed command execution and (future) dynamic scripting capabilities. It supports HTTP-based interactions to trigger Revit operations externally.
+This project provides a Revit add-in that exposes a **Model Context Protocol (MCP)** server.  
+It allows remote automation of Revit through simple HTTP requests. Each command is
+strongly typed and executed through the Revit API. The server can optionally
+synchronize model data to PostgreSQL. Dynamic scripting was removed for now but
+may return in the future.
 
 ---
 
@@ -10,6 +14,8 @@ This project implements a Model Context Protocol (MCP) server and command interf
 * **Command Pattern**: Typed commands implement the `ICommand` interface.
 * **External Event Handling**: Safely dispatches commands into Revit’s UI thread.
 * **View Filter Automation**: Create and apply filters with overrides directly from HTTP requests.
+* **Database Sync**: Optionally write elements and metadata to PostgreSQL.
+* **Plan Execution**: Chain multiple commands in a single request.
 
 ---
 
@@ -147,6 +153,74 @@ This project implements a Model Context Protocol (MCP) server and command interf
     { "action": "ListElementsByCategory", "params": { "category": "Walls" } },
     { "action": "FilterByParameter", "params": { "param": "Top is Attached", "value": "No" } }
   ]
+}
+```
+
+### 🔹 List Categories
+
+```json
+{
+  "action": "ListCategories"
+}
+```
+
+### 🔹 List Elements by Category
+
+```json
+{
+  "action": "ListElements",
+  "category": "Walls"
+}
+```
+
+### 🔹 Get Families and Types
+
+```json
+{
+  "action": "GetFamiliesAndTypes"
+}
+```
+
+### 🔹 List Views
+
+```json
+{
+  "action": "ListViews"
+}
+```
+
+### 🔹 List Sheets
+
+```json
+{
+  "action": "ListSheets"
+}
+```
+
+### 🔹 List Schedules
+
+```json
+{
+  "action": "ListSchedules"
+}
+```
+
+### 🔹 Filter Elements by Parameter
+
+```json
+{
+  "action": "FilterByParameter",
+  "param": "Mark",
+  "value": "A1",
+  "input_elements": "[{\"Id\":12345},{\"Id\":67890}]"
+}
+```
+
+### 🔹 Sync Model Data to PostgreSQL
+
+```json
+{
+  "action": "SyncModelToSql"
 }
 ```
 
