@@ -74,7 +74,12 @@ public class GetElementParametersCommand : ICommand
                         value = param.AsElementId().IntegerValue;
                         break;
                 }
-                paramData[name] = new { value, storage };
+                bool isType = param.Element != null && param.Element.Id != element.Id;
+                var pInfo = new Dictionary<string, object>();
+                pInfo["value"] = value;
+                pInfo["storage"] = storage;
+                pInfo["is_type"] = isType;
+                paramData[name] = pInfo;
             }
             result[id.IntegerValue.ToString()] = paramData;
         }

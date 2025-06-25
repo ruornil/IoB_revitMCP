@@ -26,7 +26,7 @@ This project implements a Model Context Protocol (MCP) server and command interf
 | Command Files                  | Purpose |
 | ------------------------------ | -------------------------------------------------------------------------------- |
 | `AddViewFilterCommand.cs`      | Creates view filters with visibility, color, line pattern, and fill overrides. |
-| `ChangeFamilyAndType.cs`       | Changes the family and type for elements. |
+| `ModifyElementsCommand.cs`       | Changes element types and sets parameter values. |
 | `CreateSheetCommand.cs`        | Creates a new sheet using a specified title block. |
 | `ExportToJsonCommand.cs`       | Exports elements and their parameters to JSON. |
 | `FilterByParameterCommand.cs`  | Filters a list of elements based on parameter value. |
@@ -37,7 +37,11 @@ This project implements a Model Context Protocol (MCP) server and command interf
 | `NewSharedParameter.cs`        | Creates and binds shared parameters from shared parameter file. |
 | `PlaceViewsOnSheet.cs`         | Places views on a Revit sheet, stacking them from bottom-right up. |
 | `PlanExecutorCommand.cs`       | Executes a stepwise plan, enabling command chaining. |
-| `SetParameters.cs`             | Sets multiple parameters on one or more elements by ID or selection. |
+| `ListCategoriesCommand.cs`     | Enumerates all categories in the model. |
+| `ListViewsCommand.cs`          | Lists views with metadata. |
+| `ListSheetsCommand.cs`         | Lists sheets and title blocks. |
+| `ListSchedulesCommand.cs`      | Lists schedule views in the model. |
+| `SyncModelToSqlCommand.cs`     | Writes model data to PostgreSQL. |
 
 | Helper Files                   | Purpose                                                                        |
 | ------------------------------ | ------------------------------------------------------------------------------ |
@@ -89,20 +93,22 @@ This project implements a Model Context Protocol (MCP) server and command interf
 }
 ```
 
-### 🔹 Set Multiple Parameters on Selected or Targeted Elements
+### 🔹 Modify Element Types and Parameters
 
 ```json
 {
-  "action": "SetParameters",
-  "element_ids": "[12345, 67890]",
-  "parameters": "{\"Mark\": \"Wall-A1\", \"Comments\": \"Checked\"}"
+  "action": "ModifyElements",
+  "changes": [
+    { "element_id": 12345, "new_type_name": "36\" x 84\"" },
+    { "element_id": 12345, "parameters": { "Mark": "Wall-A1" } }
+  ]
 }
 ```
-### 🔹 Get Project Info
+### 🔹 Get Model Context
 
 ```json
 {
-  "action": "GetProjectInfo"
+  "action": "GetModelContext"
 }
 ```
 

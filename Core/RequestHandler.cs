@@ -28,6 +28,11 @@ public class RequestHandler : IExternalEventHandler
         { "ExecutePlan", new PlanExecutorCommand() },
         { "AddViewFilter", new AddViewFilterCommand()},
         { "GetFamilyAndTypes", new GetFamiliesAndTypesCommand()},
+        { "ListCategories", new ListCategoriesCommand()},
+        { "ListViews", new ListViewsCommand()},
+        { "ListSheets", new ListSheetsCommand()},
+        { "ListSchedules", new ListSchedulesCommand()},
+        { "SyncModelToSql", new SyncModelToSqlCommand()},
         { "GetModelContext", new GetModelContextCommand()},
         { "ExportToJson" , new ExportToJsonCommand() }
     };

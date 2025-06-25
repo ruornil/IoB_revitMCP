@@ -1,4 +1,5 @@
-﻿// GetFamiliesAndTypesCommand.cs - lists all families and their types in the model optionally filtered by Revit class
+﻿// GetFamiliesAndTypesCommand.cs - lists all families and their types in the model
+// Extended to include family GUID and document id
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using System;
@@ -12,7 +13,7 @@ public class GetFamiliesAndTypesCommand : ICommand
     {
         var doc = app.ActiveUIDocument.Document;
         var response = new Dictionary<string, object>();
-        var result = new List<Dictionary<string, string>>();
+        var result = new List<Dictionary<string, object>>();
 
         try
         {
@@ -45,13 +46,14 @@ public class GetFamiliesAndTypesCommand : ICommand
             {
                 if (type.FamilyName != null && type.Name != null)
                 {
-                    result.Add(new Dictionary<string, string>
-                    {
-                        { "family", type.FamilyName },
-                        { "type", type.Name },
-                        { "id", type.Id.IntegerValue.ToString() },
-                        { "category", type.Category?.Name ?? "" }
-                    });
+                    var item = new Dictionary<string, object>();
+                    item["family"] = type.FamilyName;
+                    item["type"] = type.Name;
+                    item["id"] = type.Id.IntegerValue.ToString();
+                    item["category"] = type.Category?.Name ?? string.Empty;
+                    item["guid"] = type.UniqueId;
+                    item["doc_id"] = doc.PathName;
+                    result.Add(item);
                 }
             }
 
