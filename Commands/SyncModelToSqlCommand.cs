@@ -3,7 +3,6 @@ using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Linq;
 
 public class SyncModelToSqlCommand : ICommand
 {
@@ -50,7 +49,7 @@ public class SyncModelToSqlCommand : ICommand
         foreach (var element in collector)
         {
             string typeName = string.Empty;
-            Element type = doc.GetElement(element.GetTypeId());
+            ElementType type = doc.GetElement(element.GetTypeId()) as ElementType;
             if (type != null)
                 typeName = type.Name;
             string levelName = string.Empty;
@@ -61,13 +60,9 @@ public class SyncModelToSqlCommand : ICommand
             }
             db.UpsertElement(element.Id.IntegerValue, ParseGuid(element.UniqueId), element.Name, element.Category?.Name ?? string.Empty, typeName, levelName, doc.PathName, now);
 
-            foreach (Parameter param in element.Parameters)
+            if (type != null)
             {
-                if (param == null || param.Definition == null) continue;
-                string pname = param.Definition.Name;
-                string val = ParamToString(param);
-                bool isType = param.Element != null && param.Element.Id != element.Id;
-                db.UpsertParameter(element.Id.IntegerValue, pname, val, isType, null);
+                db.UpsertElementType(type.Id.IntegerValue, ParseGuid(type.UniqueId), type.FamilyName, type.Name, type.Category?.Name ?? string.Empty, doc.PathName, now);
             }
             count++;
         }
@@ -76,22 +71,6 @@ public class SyncModelToSqlCommand : ICommand
         return response;
     }
 
-    private static string ParamToString(Parameter p)
-    {
-        switch (p.StorageType)
-        {
-            case StorageType.String:
-                return p.AsString();
-            case StorageType.Double:
-                return p.AsDouble().ToString();
-            case StorageType.Integer:
-                return p.AsInteger().ToString();
-            case StorageType.ElementId:
-                return p.AsElementId().IntegerValue.ToString();
-            default:
-                return string.Empty;
-        }
-    }
 
     private static Guid ParseGuid(string uid)
     {
