@@ -2,7 +2,6 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Linq;
 
 public class ListSheetsCommand : ICommand
@@ -21,10 +20,15 @@ public class ListSheetsCommand : ICommand
         var sheets = new List<Dictionary<string, object>>();
         try
         {
-            string conn = ConfigurationManager.ConnectionStrings["revit"]?.ConnectionString;
-            PostgresDb db = null;
-            if (!string.IsNullOrEmpty(conn))
-                db = new PostgresDb(conn);
+            string conn = DbConfigHelper.GetConnectionString(input);
+            if (string.IsNullOrEmpty(conn))
+            {
+                response["status"] = "error";
+                response["message"] = "No connection string found. " + DbConfigHelper.GetHelpMessage();
+                return response;
+            }
+
+            PostgresDb db = new PostgresDb(conn);
 
             var col = new FilteredElementCollector(doc).OfClass(typeof(ViewSheet)).Cast<ViewSheet>();
             foreach (var sheet in col)
@@ -40,10 +44,7 @@ public class ListSheetsCommand : ICommand
                 item["doc_id"] = doc.PathName;
                 sheets.Add(item);
 
-                if (db != null)
-                {
-                    db.UpsertSheet(sheet.Id.IntegerValue, Guid.Empty, sheet.Name, sheet.SheetNumber, item["title_block"].ToString(), doc.PathName);
-                }
+                db.UpsertSheet(sheet.Id.IntegerValue, Guid.Empty, sheet.Name, sheet.SheetNumber, item["title_block"].ToString(), doc.PathName);
             }
             response["status"] = "success";
             response["sheets"] = sheets;

@@ -2,7 +2,6 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Linq;
 
 public class ListViewsCommand : ICommand
@@ -21,10 +20,15 @@ public class ListViewsCommand : ICommand
         var result = new List<Dictionary<string, object>>();
         try
         {
-            string conn = ConfigurationManager.ConnectionStrings["revit"]?.ConnectionString;
-            PostgresDb db = null;
-            if (!string.IsNullOrEmpty(conn))
-                db = new PostgresDb(conn);
+            string conn = DbConfigHelper.GetConnectionString(input);
+            if (string.IsNullOrEmpty(conn))
+            {
+                response["status"] = "error";
+                response["message"] = "No connection string found. " + DbConfigHelper.GetHelpMessage();
+                return response;
+            }
+
+            PostgresDb db = new PostgresDb(conn);
 
             var views = new FilteredElementCollector(doc)
                 .OfClass(typeof(View))
@@ -46,11 +50,8 @@ public class ListViewsCommand : ICommand
                 item["doc_id"] = doc.PathName;
                 result.Add(item);
 
-                if (db != null)
-                {
-                    int? sheetId = vp != null ? (int?)vp.SheetId.IntegerValue : null;
-                    db.UpsertView(view.Id.IntegerValue, Guid.Empty, view.Name, view.ViewType.ToString(), view.Scale, view.Discipline.ToString(), view.DetailLevel.ToString(), sheetId, doc.PathName);
-                }
+                int? sheetId = vp != null ? (int?)vp.SheetId.IntegerValue : null;
+                db.UpsertView(view.Id.IntegerValue, Guid.Empty, view.Name, view.ViewType.ToString(), view.Scale, view.Discipline.ToString(), view.DetailLevel.ToString(), sheetId, doc.PathName);
             }
             response["status"] = "success";
             response["views"] = result;

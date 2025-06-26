@@ -2,7 +2,6 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Linq;
 
 public class ListCategoriesCommand : ICommand
@@ -21,10 +20,15 @@ public class ListCategoriesCommand : ICommand
         var categories = new List<Dictionary<string, object>>();
         try
         {
-            string conn = ConfigurationManager.ConnectionStrings["revit"]?.ConnectionString;
-            PostgresDb db = null;
-            if (!string.IsNullOrEmpty(conn))
-                db = new PostgresDb(conn);
+            string conn = DbConfigHelper.GetConnectionString(input);
+            if (string.IsNullOrEmpty(conn))
+            {
+                response["status"] = "error";
+                response["message"] = "No connection string found. " + DbConfigHelper.GetHelpMessage();
+                return response;
+            }
+
+            PostgresDb db = new PostgresDb(conn);
 
             foreach (Category cat in doc.Settings.Categories)
             {
@@ -35,10 +39,7 @@ public class ListCategoriesCommand : ICommand
                 item["guid"] = cat.Id.IntegerValue.ToString();
                 categories.Add(item);
 
-                if (db != null)
-                {
-                    db.UpsertCategory(cat.Id.IntegerValue.ToString(), cat.Name, cat.CategoryType.ToString(), item["description"].ToString(), Guid.Empty);
-                }
+                db.UpsertCategory(cat.Id.IntegerValue.ToString(), cat.Name, cat.CategoryType.ToString(), item["description"].ToString(), Guid.Empty);
             }
             response["status"] = "success";
             response["categories"] = categories;
