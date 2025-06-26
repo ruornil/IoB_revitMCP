@@ -48,6 +48,7 @@ may return in the future.
 | `ListSheetsCommand.cs`         | Lists sheets and title blocks. |
 | `ListSchedulesCommand.cs`      | Lists schedule views in the model. |
 | `SyncModelToSqlCommand.cs`     | Writes model data to PostgreSQL. |
+| `QuerySqlCommand.cs`           | Executes arbitrary SQL queries against the PostgreSQL database. |
 
 | Helper Files                   | Purpose                                                                        |
 | ------------------------------ | ------------------------------------------------------------------------------ |
@@ -222,6 +223,34 @@ may return in the future.
 {
   "action": "SyncModelToSql"
 }
+```
+
+### 🔹 Run an Arbitrary SQL Query
+
+```json
+{
+  "action": "QuerySql",
+  "sql": "SELECT * FROM revit_elements WHERE category = @cat",
+  "params": "{ \"cat\": \"Walls\" }"
+}
+```
+
+## 🔌 Configuring the PostgreSQL Connection
+
+The plugin looks for a connection string in several locations:
+1. `App.config` under the key `revit`
+2. Environment variable `REVIT_DB_CONN`
+3. A file path provided via the `conn_file` parameter
+4. A `revit-conn.txt` file next to the add-in DLL
+
+Example `App.config` snippet:
+
+```xml
+<configuration>
+  <connectionStrings>
+    <add name="revit" connectionString="Host=localhost;Database=revit;Username=user;Password=pass"/>
+  </connectionStrings>
+</configuration>
 ```
 
 ---

@@ -33,6 +33,7 @@ public class RequestHandler : IExternalEventHandler
         { "ListSheets", new ListSheetsCommand()},
         { "ListSchedules", new ListSchedulesCommand()},
         { "SyncModelToSql", new SyncModelToSqlCommand()},
+        { "QuerySql", new QuerySqlCommand()},
         { "GetModelContext", new GetModelContextCommand()},
         { "ExportToJson" , new ExportToJsonCommand() }
     };

@@ -150,6 +150,7 @@
     <Compile Include="Commands\ListSheetsCommand.cs" />
     <Compile Include="Commands\ListSchedulesCommand.cs" />
     <Compile Include="Commands\SyncModelToSqlCommand.cs" />
+    <Compile Include="Commands\QuerySqlCommand.cs" />
     <Compile Include="Commands\GetModelContextCommand.cs" />
     <Compile Include="Commands\ModifyElementsCommand.cs" />
     <Compile Include="Commands\PlaceViewsOnSheet.cs" />
