@@ -2,7 +2,6 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Linq;
 
 public class ListSchedulesCommand : ICommand
@@ -21,10 +20,15 @@ public class ListSchedulesCommand : ICommand
         var scheds = new List<Dictionary<string, object>>();
         try
         {
-            string conn = ConfigurationManager.ConnectionStrings["revit"]?.ConnectionString;
-            PostgresDb db = null;
-            if (!string.IsNullOrEmpty(conn))
-                db = new PostgresDb(conn);
+            string conn = DbConfigHelper.GetConnectionString(input);
+            if (string.IsNullOrEmpty(conn))
+            {
+                response["status"] = "error";
+                response["message"] = "No connection string found. " + DbConfigHelper.GetHelpMessage();
+                return response;
+            }
+
+            PostgresDb db = new PostgresDb(conn);
 
             var col = new FilteredElementCollector(doc).OfClass(typeof(ViewSchedule)).Cast<ViewSchedule>();
             foreach (var sch in col)
@@ -37,10 +41,7 @@ public class ListSchedulesCommand : ICommand
                 item["doc_id"] = doc.PathName;
                 scheds.Add(item);
 
-                if (db != null)
-                {
-                    db.UpsertSchedule(sch.Id.IntegerValue, Guid.Empty, sch.Name, item["category"].ToString(), doc.PathName);
-                }
+                db.UpsertSchedule(sch.Id.IntegerValue, Guid.Empty, sch.Name, item["category"].ToString(), doc.PathName);
             }
             response["status"] = "success";
             response["schedules"] = scheds;
