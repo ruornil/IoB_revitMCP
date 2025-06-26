@@ -190,9 +190,9 @@ public class PostgresDb
         string sql = @"INSERT INTO revit_families
             (name, family_type, category, guid, doc_id)
             VALUES (@name, @type, @cat, @guid, @doc)
-            ON CONFLICT (name, family_type, doc_id) DO UPDATE SET
-                category = EXCLUDED.category,
-                guid = EXCLUDED.guid";
+            ON CONFLICT (name, family_type, category) DO UPDATE SET
+                guid = EXCLUDED.guid,
+                doc_id = EXCLUDED.doc_id";
 
         ExecuteNonQuery(sql,
             new NpgsqlParameter("@name", name ?? (object)DBNull.Value),
