@@ -43,15 +43,26 @@ public class SyncModelToSqlCommand : ICommand
 
         // Proceed as usual if the test passed
         var db = new PostgresDb(conn);
-        var collector = new FilteredElementCollector(doc).WhereElementIsNotElementType();
         DateTime now = DateTime.UtcNow;
+
+        // gather element types once and store in DB
+        var typeCollector = new FilteredElementCollector(doc).WhereElementIsElementType();
+        var typeMap = new Dictionary<ElementId, string>();
+        foreach (ElementType type in typeCollector)
+        {
+            db.UpsertElementType(type.Id.IntegerValue, ParseGuid(type.UniqueId), type.FamilyName, type.Name, type.Category?.Name ?? string.Empty, doc.PathName, now);
+            if (!typeMap.ContainsKey(type.Id))
+                typeMap[type.Id] = type.Name;
+        }
+
+        var collector = new FilteredElementCollector(doc).WhereElementIsNotElementType();
         int count = 0;
         foreach (var element in collector)
         {
             string typeName = string.Empty;
-            ElementType type = doc.GetElement(element.GetTypeId()) as ElementType;
-            if (type != null)
-                typeName = type.Name;
+            if (typeMap.TryGetValue(element.GetTypeId(), out string tname))
+                typeName = tname;
+
             string levelName = string.Empty;
             if (element.LevelId != ElementId.InvalidElementId)
             {
@@ -59,11 +70,6 @@ public class SyncModelToSqlCommand : ICommand
                 if (lvl != null) levelName = lvl.Name;
             }
             db.UpsertElement(element.Id.IntegerValue, ParseGuid(element.UniqueId), element.Name, element.Category?.Name ?? string.Empty, typeName, levelName, doc.PathName, now);
-
-            if (type != null)
-            {
-                db.UpsertElementType(type.Id.IntegerValue, ParseGuid(type.UniqueId), type.FamilyName, type.Name, type.Category?.Name ?? string.Empty, doc.PathName, now);
-            }
             count++;
         }
         response["status"] = "success";
