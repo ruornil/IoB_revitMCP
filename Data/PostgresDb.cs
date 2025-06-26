@@ -201,4 +201,28 @@ public class PostgresDb
             new NpgsqlParameter("@guid", guid ?? (object)DBNull.Value),
             new NpgsqlParameter("@doc", docId ?? (object)DBNull.Value));
     }
+
+    public void UpsertElementType(int id, Guid guid, string family, string typeName,
+        string category, string docId, DateTime lastSeen)
+    {
+        string sql = @"INSERT INTO revit_elementTypes
+            (id, guid, family, type_name, category, doc_id, last_seen)
+            VALUES (@id, @guid, @family, @type_name, @category, @doc_id, @last_seen)
+            ON CONFLICT (id) DO UPDATE SET
+                guid = EXCLUDED.guid,
+                family = EXCLUDED.family,
+                type_name = EXCLUDED.type_name,
+                category = EXCLUDED.category,
+                doc_id = EXCLUDED.doc_id,
+                last_seen = EXCLUDED.last_seen";
+
+        ExecuteNonQuery(sql,
+            new NpgsqlParameter("@id", id),
+            new NpgsqlParameter("@guid", guid),
+            new NpgsqlParameter("@family", family ?? (object)DBNull.Value),
+            new NpgsqlParameter("@type_name", typeName ?? (object)DBNull.Value),
+            new NpgsqlParameter("@category", category ?? (object)DBNull.Value),
+            new NpgsqlParameter("@doc_id", docId ?? (object)DBNull.Value),
+            new NpgsqlParameter("@last_seen", lastSeen));
+    }
 }
