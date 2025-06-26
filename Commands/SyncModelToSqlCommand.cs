@@ -18,14 +18,31 @@ public class SyncModelToSqlCommand : ICommand
             return response;
         }
 
-        string conn = ConfigurationManager.ConnectionStrings["revit"]?.ConnectionString;
+        string conn = DbConfigHelper.GetConnectionString(input);
         if (string.IsNullOrEmpty(conn))
         {
             response["status"] = "error";
-            response["message"] = "No connection string.";
+            response["message"] = "No connection string found. " + DbConfigHelper.GetHelpMessage();
             return response;
         }
 
+        // Run connection test before instantiating PostgresDb
+        try
+        {
+            using (var testConn = new Npgsql.NpgsqlConnection(conn))
+            {
+                testConn.Open(); // This will throw if Npgsql or dependencies are broken
+            }
+        }
+        catch (Exception ex)
+        {
+            System.IO.File.WriteAllText("C:\\Temp\\pg-debug.txt", ex.ToString());
+            response["status"] = "error";
+            response["message"] = "Connection test failed. See pg-debug.txt for details.";
+            return response;
+        }
+
+        // Proceed as usual if the test passed
         var db = new PostgresDb(conn);
         var collector = new FilteredElementCollector(doc).WhereElementIsNotElementType();
         DateTime now = DateTime.UtcNow;
