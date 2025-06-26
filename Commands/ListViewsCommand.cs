@@ -43,7 +43,11 @@ public class ListViewsCommand : ICommand
                 item["name"] = view.Name;
                 item["view_type"] = view.ViewType.ToString();
                 item["scale"] = view.Scale;
-                item["discipline"] = view.Discipline.ToString();
+
+                // Discipline is not available in Revit 2023, so use a placeholder
+                string discipline = "Unknown";
+                item["discipline"] = discipline;
+
                 item["detail_level"] = view.DetailLevel.ToString();
                 var vp = new FilteredElementCollector(doc).OfClass(typeof(Viewport)).Cast<Viewport>().FirstOrDefault(v => v.ViewId == view.Id);
                 item["associated_sheet_id"] = vp != null ? (int?)vp.SheetId.IntegerValue : null;
@@ -51,7 +55,7 @@ public class ListViewsCommand : ICommand
                 result.Add(item);
 
                 int? sheetId = vp != null ? (int?)vp.SheetId.IntegerValue : null;
-                db.UpsertView(view.Id.IntegerValue, Guid.Empty, view.Name, view.ViewType.ToString(), view.Scale, view.Discipline.ToString(), view.DetailLevel.ToString(), sheetId, doc.PathName);
+                db.UpsertView(view.Id.IntegerValue, Guid.Empty, view.Name, view.ViewType.ToString(), view.Scale, discipline, view.DetailLevel.ToString(), sheetId, doc.PathName);
             }
             response["status"] = "success";
             response["views"] = result;
