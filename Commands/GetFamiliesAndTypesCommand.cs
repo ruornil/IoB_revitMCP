@@ -15,6 +15,11 @@ public class GetFamiliesAndTypesCommand : ICommand
         var response = new Dictionary<string, object>();
         var result = new List<Dictionary<string, object>>();
 
+        string conn = DbConfigHelper.GetConnectionString(input);
+        PostgresDb db = null;
+        if (!string.IsNullOrEmpty(conn))
+            db = new PostgresDb(conn);
+
         try
         {
             Type filterType = typeof(ElementType);
@@ -54,6 +59,11 @@ public class GetFamiliesAndTypesCommand : ICommand
                     item["guid"] = type.UniqueId;
                     item["doc_id"] = doc.PathName;
                     result.Add(item);
+
+                    if (db != null)
+                    {
+                        db.UpsertFamily(type.FamilyName, type.Name, type.Category?.Name ?? string.Empty, type.UniqueId, doc.PathName);
+                    }
                 }
             }
 
