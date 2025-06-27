@@ -1,4 +1,5 @@
 using Npgsql;
+using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -248,13 +249,22 @@ public class PostgresDb
                 project_info = EXCLUDED.project_info,
                 project_parameters = EXCLUDED.project_parameters";
 
+        var infoParam = new NpgsqlParameter("@info", projectInfo ?? (object)DBNull.Value)
+        {
+            NpgsqlDbType = NpgsqlDbType.Jsonb
+        };
+        var paramsParam = new NpgsqlParameter("@params", projectParameters ?? (object)DBNull.Value)
+        {
+            NpgsqlDbType = NpgsqlDbType.Jsonb
+        };
+
         ExecuteNonQuery(sql,
             new NpgsqlParameter("@doc", docId ?? (object)DBNull.Value),
             new NpgsqlParameter("@name", modelName ?? (object)DBNull.Value),
             new NpgsqlParameter("@guid", guid),
             new NpgsqlParameter("@last_saved", lastSaved),
-            new NpgsqlParameter("@info", projectInfo ?? (object)DBNull.Value),
-            new NpgsqlParameter("@params", projectParameters ?? (object)DBNull.Value));
+            infoParam,
+            paramsParam);
     }
 
     public DateTime? GetModelLastSaved(string docId)
