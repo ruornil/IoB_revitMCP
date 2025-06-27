@@ -29,6 +29,12 @@ public class ListCategoriesCommand : ICommand
             }
 
             PostgresDb db = new PostgresDb(conn);
+            DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
+            if (db.GetModelLastSaved(doc.PathName) == lastSaved)
+            {
+                response["status"] = "up_to_date";
+                return response;
+            }
 
             foreach (Category cat in doc.Settings.Categories)
             {
@@ -37,10 +43,12 @@ public class ListCategoriesCommand : ICommand
                 item["name"] = cat.Name;
                 item["group"] = cat.CategoryType.ToString();
                 item["guid"] = cat.Id.IntegerValue.ToString();
+                item["description"] = string.Empty;
                 categories.Add(item);
 
-                db.UpsertCategory(cat.Id.IntegerValue.ToString(), cat.Name, cat.CategoryType.ToString(), item["description"].ToString(), Guid.Empty);
+                db.UpsertCategory(cat.Id.IntegerValue.ToString(), cat.Name, cat.CategoryType.ToString(), item["description"].ToString(), Guid.Empty, lastSaved);
             }
+            db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved);
             response["status"] = "success";
             response["categories"] = categories;
         }
@@ -50,5 +58,16 @@ public class ListCategoriesCommand : ICommand
             response["message"] = ex.Message;
         }
         return response;
+    }
+
+    private static Guid ParseGuid(string uid)
+    {
+        if (string.IsNullOrEmpty(uid)) return Guid.Empty;
+        if (uid.Length >= 36)
+        {
+            Guid g;
+            if (Guid.TryParse(uid.Substring(0, 36), out g)) return g;
+        }
+        return Guid.Empty;
     }
 }

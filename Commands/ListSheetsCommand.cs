@@ -29,6 +29,12 @@ public class ListSheetsCommand : ICommand
             }
 
             PostgresDb db = new PostgresDb(conn);
+            DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
+            if (db.GetModelLastSaved(doc.PathName) == lastSaved)
+            {
+                response["status"] = "up_to_date";
+                return response;
+            }
 
             var col = new FilteredElementCollector(doc).OfClass(typeof(ViewSheet)).Cast<ViewSheet>();
             foreach (var sheet in col)
@@ -44,8 +50,9 @@ public class ListSheetsCommand : ICommand
                 item["doc_id"] = doc.PathName;
                 sheets.Add(item);
 
-                db.UpsertSheet(sheet.Id.IntegerValue, Guid.Empty, sheet.Name, sheet.SheetNumber, item["title_block"].ToString(), doc.PathName);
+                db.UpsertSheet(sheet.Id.IntegerValue, Guid.Empty, sheet.Name, sheet.SheetNumber, item["title_block"].ToString(), doc.PathName, lastSaved);
             }
+            db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved);
             response["status"] = "success";
             response["sheets"] = sheets;
         }
@@ -55,5 +62,16 @@ public class ListSheetsCommand : ICommand
             response["message"] = ex.Message;
         }
         return response;
+    }
+
+    private static Guid ParseGuid(string uid)
+    {
+        if (string.IsNullOrEmpty(uid)) return Guid.Empty;
+        if (uid.Length >= 36)
+        {
+            Guid g;
+            if (Guid.TryParse(uid.Substring(0, 36), out g)) return g;
+        }
+        return Guid.Empty;
     }
 }
