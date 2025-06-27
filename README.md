@@ -33,7 +33,6 @@ future.
 | `RequestHandler.cs`            | Routes incoming requests to appropriate ICommand implementations.              |
 | `ICommand.cs`                  | Interface that all typed command classes implement.                            |
 
-
 | Command Files                  | Purpose |
 | ------------------------------ | -------------------------------------------------------------------------------- |
 | `AddViewFilterCommand.cs`      | Creates view filters with visibility, color, line pattern, and fill overrides. |
@@ -62,7 +61,7 @@ future.
 
 ---
 
-## 🚀 Usage Examples
+## Usage Examples
 
 ### 🔹 Get Element Parameters
 
@@ -116,6 +115,7 @@ future.
   ]
 }
 ```
+
 ### 🔹 Get Model Context
 
 ```json
@@ -243,6 +243,7 @@ future.
 ## 🔌 Configuring the PostgreSQL Connection
 
 The plugin looks for a connection string in several locations:
+
 1. `App.config` under the key `revit`
 2. Environment variable `REVIT_DB_CONN`
 3. A file path provided via the `conn_file` parameter
@@ -268,6 +269,7 @@ Example `App.config` snippet:
 * ✅ Sheets arrange views starting bottom-right and fill leftward then upward.
 * ✅ Model data syncs to PostgreSQL tables including `model_info` with project metadata.
 * ✅ SQL queries can be issued via `QuerySql` for AI-driven analysis.
+
 ---
 
 ## 📄 License
