@@ -1,21 +1,26 @@
 # Revit MCP Plugin
 
-This project provides a Revit add-in that exposes a **Model Context Protocol (MCP)** server.  
-It allows remote automation of Revit through simple HTTP requests. Each command is
-strongly typed and executed through the Revit API. The server can optionally
-synchronize model data to PostgreSQL. Dynamic scripting was removed for now but
-may return in the future.
+This project provides a Revit add-in that exposes a **Model Context Protocol (MCP)** server.
+It allows remote automation of Revit through simple HTTP requests.
+Commands are strongly typed and executed through the Revit API.
+The server can optionally synchronize model data to PostgreSQL where it becomes
+searchable by an AI agent.  An accompanying **n8n** workflow connects ChatGPT to
+this add‑in so natural language requests are converted to the JSON commands
+described below. Dynamic scripting was removed for now but may return in the
+future.
 
 ---
 
 ## 🔧 Features
 
-* **HTTP Listener**: Listens on `http://localhost:5005/mcp/` to receive JSON-based commands.
-* **Command Pattern**: Typed commands implement the `ICommand` interface.
-* **External Event Handling**: Safely dispatches commands into Revit’s UI thread.
-* **View Filter Automation**: Create and apply filters with overrides directly from HTTP requests.
-* **Database Sync**: Optionally write elements and metadata to PostgreSQL.
-* **Plan Execution**: Chain multiple commands in a single request.
+* **HTTP Listener** – serves `http://localhost:5005/mcp/` for JSON-based commands.
+* **Command Pattern** – strongly typed command classes implement `ICommand`.
+* **External Event Handling** – safely dispatches actions onto Revit’s UI thread.
+* **View Filter Automation** – create and apply filters with overrides from HTTP requests.
+* **Database Sync & SQL** – export model data to PostgreSQL and run queries via `QuerySql`.
+* **Vector Search Tools** – resolve category names or API concepts with `RevitBuiltinCategories` and `RevitApiVectorDB`.
+* **Plan Execution** – chain multiple commands in a single request.
+* **LLM Integration** – use the provided n8n workflow to translate chat messages into commands.
 
 ---
 
@@ -257,11 +262,12 @@ Example `App.config` snippet:
 
 ## 🛠 Development Notes
 
-* ✅ C# 7.3 compatibility enforced
-* ✅ Removed IronPython scripting (future feature)
-* ✅ `OverrideGraphicSettings` supports projection color, line pattern, fill color, and fill pattern
-* ✅ Views are placed on sheets in columns starting from bottom-right, going top-left.
-* ✅ PostgreSQL tables will be populated, maintained with model data, and queried to control AI agent token use
+* ✅ C# 7.3 compatibility enforced.
+* ✅ Removed IronPython scripting (may return later).
+* ✅ `OverrideGraphicSettings` now supports projection color, line pattern, fill color and fill pattern.
+* ✅ Sheets arrange views starting bottom-right and fill leftward then upward.
+* ✅ Model data syncs to PostgreSQL tables including `model_info` with project metadata.
+* ✅ SQL queries can be issued via `QuerySql` for AI-driven analysis.
 ---
 
 ## 📄 License
