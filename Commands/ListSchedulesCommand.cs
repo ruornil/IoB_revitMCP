@@ -29,6 +29,12 @@ public class ListSchedulesCommand : ICommand
             }
 
             PostgresDb db = new PostgresDb(conn);
+            DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
+            if (db.GetModelLastSaved(doc.PathName) == lastSaved)
+            {
+                response["status"] = "up_to_date";
+                return response;
+            }
 
             var col = new FilteredElementCollector(doc).OfClass(typeof(ViewSchedule)).Cast<ViewSchedule>();
             foreach (var sch in col)
@@ -41,8 +47,9 @@ public class ListSchedulesCommand : ICommand
                 item["doc_id"] = doc.PathName;
                 scheds.Add(item);
 
-                db.UpsertSchedule(sch.Id.IntegerValue, Guid.Empty, sch.Name, item["category"].ToString(), doc.PathName);
+                db.UpsertSchedule(sch.Id.IntegerValue, Guid.Empty, sch.Name, item["category"].ToString(), doc.PathName, lastSaved);
             }
+            db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved);
             response["status"] = "success";
             response["schedules"] = scheds;
         }
@@ -52,5 +59,16 @@ public class ListSchedulesCommand : ICommand
             response["message"] = ex.Message;
         }
         return response;
+    }
+
+    private static Guid ParseGuid(string uid)
+    {
+        if (string.IsNullOrEmpty(uid)) return Guid.Empty;
+        if (uid.Length >= 36)
+        {
+            Guid g;
+            if (Guid.TryParse(uid.Substring(0, 36), out g)) return g;
+        }
+        return Guid.Empty;
     }
 }

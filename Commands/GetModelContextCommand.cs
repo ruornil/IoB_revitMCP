@@ -78,6 +78,7 @@ public class GetModelContextCommand : ICommand
 
             response["status"] = "success";
             response["model_name"] = doc.Title;
+            response["guid"] = ParseGuid(doc.ProjectInformation.UniqueId).ToString();
             response["last_saved"] = System.IO.File.GetLastWriteTime(doc.PathName).ToString("yyyy-MM-ddTHH:mm:ss");
             response["project_info"] = info;
             response["project_parameters"] = parameters;
@@ -89,5 +90,16 @@ public class GetModelContextCommand : ICommand
         }
 
         return response;
+    }
+
+    private static Guid ParseGuid(string uid)
+    {
+        if (string.IsNullOrEmpty(uid)) return Guid.Empty;
+        if (uid.Length >= 36)
+        {
+            Guid g;
+            if (Guid.TryParse(uid.Substring(0, 36), out g)) return g;
+        }
+        return Guid.Empty;
     }
 }

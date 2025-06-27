@@ -29,6 +29,12 @@ public class ListViewsCommand : ICommand
             }
 
             PostgresDb db = new PostgresDb(conn);
+            DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
+            if (db.GetModelLastSaved(doc.PathName) == lastSaved)
+            {
+                response["status"] = "up_to_date";
+                return response;
+            }
 
             var views = new FilteredElementCollector(doc)
                 .OfClass(typeof(View))
@@ -55,8 +61,9 @@ public class ListViewsCommand : ICommand
                 result.Add(item);
 
                 int? sheetId = vp != null ? (int?)vp.SheetId.IntegerValue : null;
-                db.UpsertView(view.Id.IntegerValue, Guid.Empty, view.Name, view.ViewType.ToString(), view.Scale, discipline, view.DetailLevel.ToString(), sheetId, doc.PathName);
+                db.UpsertView(view.Id.IntegerValue, Guid.Empty, view.Name, view.ViewType.ToString(), view.Scale, discipline, view.DetailLevel.ToString(), sheetId, doc.PathName, lastSaved);
             }
+            db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved);
             response["status"] = "success";
             response["views"] = result;
         }
@@ -66,5 +73,16 @@ public class ListViewsCommand : ICommand
             response["message"] = ex.Message;
         }
         return response;
+    }
+
+    private static Guid ParseGuid(string uid)
+    {
+        if (string.IsNullOrEmpty(uid)) return Guid.Empty;
+        if (uid.Length >= 36)
+        {
+            Guid g;
+            if (Guid.TryParse(uid.Substring(0, 36), out g)) return g;
+        }
+        return Guid.Empty;
     }
 }

@@ -10,6 +10,16 @@ CREATE TABLE IF NOT EXISTS revit_elements (
     last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Table: model_info
+CREATE TABLE IF NOT EXISTS model_info (
+    doc_id TEXT PRIMARY KEY,
+    model_name TEXT,
+    guid UUID,
+    last_saved TIMESTAMP,
+    project_info JSONB,
+    project_parameters JSONB
+);
+
 -- Table: revit_elementTypes
 CREATE TABLE IF NOT EXISTS revit_elementTypes (
     id INTEGER PRIMARY KEY,
@@ -40,6 +50,7 @@ CREATE TABLE IF NOT EXISTS revit_categories (
     category_group TEXT,
     description TEXT,
     guid UUID,
+    last_saved TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT unique_category_enum UNIQUE (enum)
 );
 
@@ -53,7 +64,8 @@ CREATE TABLE IF NOT EXISTS revit_views (
     discipline TEXT,
     detail_level TEXT,
     associated_sheet_id INTEGER,
-    doc_id TEXT
+    doc_id TEXT,
+    last_saved TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Table: revit_sheets
@@ -63,7 +75,8 @@ CREATE TABLE IF NOT EXISTS revit_sheets (
     name TEXT,
     number TEXT,
     title_block TEXT,
-    doc_id TEXT
+    doc_id TEXT,
+    last_saved TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Table: revit_schedules
@@ -72,7 +85,8 @@ CREATE TABLE IF NOT EXISTS revit_schedules (
     guid UUID,
     name TEXT,
     category TEXT,
-    doc_id TEXT
+    doc_id TEXT,
+    last_saved TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Table: revit_families
@@ -83,5 +97,6 @@ CREATE TABLE IF NOT EXISTS revit_families (
     category TEXT,
     guid UUID,
     doc_id TEXT,
+    last_saved TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT unique_family_name_type UNIQUE (name, family_type, category)
 );

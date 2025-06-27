@@ -20,6 +20,13 @@ public class GetFamiliesAndTypesCommand : ICommand
         if (!string.IsNullOrEmpty(conn))
             db = new PostgresDb(conn);
 
+        DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
+        if (db != null && db.GetModelLastSaved(doc.PathName) == lastSaved)
+        {
+            response["status"] = "up_to_date";
+            return response;
+        }
+
         try
         {
             Type filterType = typeof(ElementType);
@@ -62,10 +69,13 @@ public class GetFamiliesAndTypesCommand : ICommand
 
                     if (db != null)
                     {
-                        db.UpsertFamily(type.FamilyName, type.Name, type.Category?.Name ?? string.Empty, type.UniqueId, doc.PathName);
+                        db.UpsertFamily(type.FamilyName, type.Name, type.Category?.Name ?? string.Empty, type.UniqueId, doc.PathName, lastSaved);
                     }
                 }
             }
+
+            if (db != null)
+                db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved);
 
             response["status"] = "success";
             response["types"] = result;
@@ -77,5 +87,16 @@ public class GetFamiliesAndTypesCommand : ICommand
         }
 
         return response;
+    }
+
+    private static Guid ParseGuid(string uid)
+    {
+        if (string.IsNullOrEmpty(uid)) return Guid.Empty;
+        if (uid.Length >= 36)
+        {
+            Guid g;
+            if (Guid.TryParse(uid.Substring(0, 36), out g)) return g;
+        }
+        return Guid.Empty;
     }
 }
