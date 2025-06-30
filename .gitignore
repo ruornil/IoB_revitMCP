@@ -15,8 +15,5 @@
 packages/
 ws-bridge/
 
-#ignore AI agent prompts
-agentPrompts.md
-
 #ignore app config
 App.config
