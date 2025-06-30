@@ -25,6 +25,26 @@ public class ListElementParametersCommand : ICommand
         if (!string.IsNullOrEmpty(conn))
             db = new PostgresDb(conn);
 
+        // Precompute project parameter categories from ParameterBindings
+        var parameterCategories = new Dictionary<string, List<string>>();
+        var bindingMap = doc.ParameterBindings;
+        var iterator = bindingMap.ForwardIterator();
+        iterator.Reset();
+        while (iterator.MoveNext())
+        {
+            Definition definition = iterator.Key;
+            ElementBinding binding = iterator.Current as ElementBinding;
+            if (definition == null || binding == null) continue;
+
+            var cats = new List<string>();
+            foreach (Category cat in binding.Categories)
+            {
+                if (cat != null)
+                    cats.Add(cat.Name);
+            }
+            parameterCategories[definition.Name] = cats;
+        }
+
         var ids = new List<ElementId>();
         if (input.TryGetValue("element_ids", out var idStr) && !string.IsNullOrWhiteSpace(idStr))
         {
@@ -113,11 +133,14 @@ public class ListElementParametersCommand : ICommand
                 pInfo["value"] = value;
                 pInfo["storage"] = storage;
                 pInfo["is_type"] = isType;
+                if (parameterCategories.TryGetValue(name, out var cats) && cats.Count > 0)
+                    pInfo["categories"] = cats;
                 paramData[name] = pInfo;
 
                 if (db != null)
                 {
-                    db.UpsertParameter(element.Id.IntegerValue, name, valueStr, isType, null, lastSaved);
+                    db.UpsertParameter(element.Id.IntegerValue, name, valueStr, isType,
+                        cats?.ToArray(), lastSaved);
                 }
             }
             result[id.IntegerValue.ToString()] = paramData;
