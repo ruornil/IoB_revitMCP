@@ -13,7 +13,7 @@
   - Accepts optional `element_ids` to limit export.
   - Gathers element metadata (id, guid, name, category, type name, level, doc id).
   - Writes/updates records in `revit_elements` and `revit_parameters` via `PostgresDb`.
-  - Removes DB records whose `last_seen` is older than current session for that document.
+  - Removes DB records whose `last_saved` is older than current session for that document.
   - Returns counts of inserted/updated/deleted records.
 - **ListCategoriesCommand.cs**
   - Enumerates all categories, populates `revit_categories` table.

@@ -76,7 +76,7 @@ public class ListElementParametersCommand : ICommand
                     typeName,
                     levelName,
                     doc.PathName,
-                    now);
+                    lastSaved);
             }
 
             var paramData = new Dictionary<string, object>();
