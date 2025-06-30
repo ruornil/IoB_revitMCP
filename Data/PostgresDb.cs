@@ -81,22 +81,24 @@ public class PostgresDb
     }
 
     public void UpsertParameter(int elementId, string name, string value, bool isType,
-        string[] applicable)
+        string[] applicable, DateTime lastSaved)
     {
         string sql = @"INSERT INTO revit_parameters
-            (element_id, param_name, param_value, is_type, applicable_categories)
-            VALUES (@elid, @name, @value, @is_type, @categories)
+            (element_id, param_name, param_value, is_type, applicable_categories, last_saved)
+            VALUES (@elid, @name, @value, @is_type, @categories, @last_saved)
             ON CONFLICT (element_id, param_name) DO UPDATE SET
                 param_value = EXCLUDED.param_value,
                 is_type = EXCLUDED.is_type,
-                applicable_categories = EXCLUDED.applicable_categories";
+                applicable_categories = EXCLUDED.applicable_categories,
+                last_saved = EXCLUDED.last_saved";
 
         ExecuteNonQuery(sql,
             new NpgsqlParameter("@elid", elementId),
             new NpgsqlParameter("@name", name),
             new NpgsqlParameter("@value", value ?? (object)DBNull.Value),
             new NpgsqlParameter("@is_type", isType),
-            new NpgsqlParameter("@categories", applicable ?? (object)DBNull.Value));
+            new NpgsqlParameter("@categories", applicable ?? (object)DBNull.Value),
+            new NpgsqlParameter("@last_saved", lastSaved));
     }
 
     public void UpsertCategory(string enumVal, string name, string group, string description, Guid guid, DateTime lastSaved)

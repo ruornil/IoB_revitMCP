@@ -4,6 +4,7 @@ using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 
 public class ListModelContextCommand : ICommand
 {
@@ -21,6 +22,12 @@ public class ListModelContextCommand : ICommand
 
         try
         {
+            string conn = DbConfigHelper.GetConnectionString(input);
+            PostgresDb db = null;
+            if (!string.IsNullOrEmpty(conn))
+                db = new PostgresDb(conn);
+            DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
+
             // project information parameters
             var projectInfo = doc.ProjectInformation;
             var info = new Dictionary<string, string>();
@@ -79,9 +86,16 @@ public class ListModelContextCommand : ICommand
             response["status"] = "success";
             response["model_name"] = doc.Title;
             response["guid"] = ParseGuid(doc.ProjectInformation.UniqueId).ToString();
-            response["last_saved"] = System.IO.File.GetLastWriteTime(doc.PathName).ToString("yyyy-MM-ddTHH:mm:ss");
+            response["last_saved"] = lastSaved.ToString("yyyy-MM-ddTHH:mm:ss");
             response["project_info"] = info;
             response["project_parameters"] = parameters;
+
+            if (db != null)
+            {
+                string jsonInfo = JsonSerializer.Serialize(info);
+                string jsonParams = JsonSerializer.Serialize(parameters);
+                db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved, jsonInfo, jsonParams);
+            }
         }
         catch (Exception ex)
         {

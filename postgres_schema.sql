@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS revit_parameters (
     param_value TEXT,
     is_type BOOLEAN,
     applicable_categories TEXT[],
+    last_saved TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT unique_element_param UNIQUE (element_id, param_name)
 );
 

@@ -34,21 +34,18 @@ public class ListElementParametersCommand : ICommand
                     ids.Add(new ElementId(intId));
             }
         }
-        else
-        {
-            ids.AddRange(uidoc.Selection.GetElementIds());
-        }
 
         if (ids.Count == 0)
         {
             response["status"] = "error";
-            response["message"] = "No elements specified or selected.";
+            response["message"] = "No element_ids provided.";
             return response;
         }
 
         var result = new Dictionary<string, object>();
         var paramNames = new HashSet<string>();
         DateTime now = DateTime.UtcNow;
+        DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
         foreach (var id in ids)
         {
             var element = doc.GetElement(id);
@@ -120,7 +117,7 @@ public class ListElementParametersCommand : ICommand
 
                 if (db != null)
                 {
-                    db.UpsertParameter(element.Id.IntegerValue, name, valueStr, isType, null);
+                    db.UpsertParameter(element.Id.IntegerValue, name, valueStr, isType, null, lastSaved);
                 }
             }
             result[id.IntegerValue.ToString()] = paramData;
@@ -129,6 +126,8 @@ public class ListElementParametersCommand : ICommand
         response["status"] = "success";
         response["parameters"] = result;
         response["parameter_names"] = paramNames.ToList();
+        if (db != null)
+            db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved);
         return response;
     }
 
