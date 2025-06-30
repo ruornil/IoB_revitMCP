@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-public class GetModelContextCommand : ICommand
+public class ListModelContextCommand : ICommand
 {
     public Dictionary<string, object> Execute(UIApplication app, Dictionary<string, string> input)
     {

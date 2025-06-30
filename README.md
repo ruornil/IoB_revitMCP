@@ -26,48 +26,71 @@ future.
 
 ## 📁 Project Structure
 
-| Core Files                     | Purpose                                                                        |
-| ------------------------------ | ------------------------------------------------------------------------------ |
-| `App.cs`                       | Entry point for the Revit add-in. Starts and stops the MCP server.             |
-| `McpServer.cs`                 | Initializes the HTTP listener and threads.                                     |
-| `RequestHandler.cs`            | Routes incoming requests to appropriate ICommand implementations.              |
-| `ICommand.cs`                  | Interface that all typed command classes implement.                            |
+| Core Files               | Purpose                                                                 |
+| ------------------------ | ----------------------------------------------------------------------- |
+| `App.cs`                 | Entry point for the Revit add-in. Starts and stops the MCP server.      |
+| `McpServer.cs`           | Initializes the HTTP listener and threads.                              |
+| `RequestHandler.cs`      | Routes incoming requests to appropriate ICommand implementations.       |
+| `ICommand.cs`            | Interface that all typed command classes implement.                     |
 
-| Command Files                  | Purpose |
-| ------------------------------ | -------------------------------------------------------------------------------- |
-| `AddViewFilterCommand.cs`      | Creates view filters with visibility, color, line pattern, and fill overrides. |
-| `ModifyElementsCommand.cs`       | Changes element types and sets parameter values. |
-| `CreateSheetCommand.cs`        | Creates a new sheet using a specified title block. |
-| `ExportToJsonCommand.cs`       | Exports elements and their parameters to JSON. |
-| `FilterByParameterCommand.cs`  | Filters a list of elements based on parameter value. |
-| `GetFamiliesAndTypesCommand.cs` | Lists all families and their types in the model. |
-| `GetElementParametersCommand.cs`      | Retrieves parameters for one or more Revit elements.                          |
-| `GetModelContext.cs`            | Retrieves model-level metadata such as name and save time and all project parameters and their metadata. |
-| `ListElementsCommand.cs`       | Lists Revit elements of a given category. |
-| `NewSharedParameter.cs`        | Creates and binds shared parameters from shared parameter file. |
-| `PlaceViewsOnSheet.cs`         | Places views on a Revit sheet, stacking them from bottom-right up. |
-| `PlanExecutorCommand.cs`       | Executes a stepwise plan, enabling command chaining. |
-| `ListCategoriesCommand.cs`     | Enumerates all categories in the model. |
-| `ListViewsCommand.cs`          | Lists views with metadata. |
-| `ListSheetsCommand.cs`         | Lists sheets and title blocks. |
-| `ListSchedulesCommand.cs`      | Lists schedule views in the model. |
-| `SyncModelToSqlCommand.cs`     | Writes model data to PostgreSQL. |
-| `QuerySqlCommand.cs`           | Executes arbitrary SQL queries against the PostgreSQL database. |
+| Command                  | Purpose                                                                 |
+|------------------------- |------------------------------------------------------------------------ |
+| `AddViewFilter`          | Add a graphical view filter based on a parameter rule.                  |
+| `CreateSheet`            | Create a new sheet with a given title block.                            |
+| `ExecutePlan`            | Chain multiple commands in a single plan.                               |
+| `ExportToJson`           | Export selected categories to JSON.                                     |
+| `FilterByParameter`      | Filter element list by a parameter's value.                             |
+| `ListCategories`         | List all Revit categories.                                              |
+| `ListElements`           | List all elements of a specified category.                              |
+| `ListElementParameters`  | Retrieve parameters for specified elements.                             |
+| `ListFamiliesAndTypes`   | Retrieve all families and their types in the model.                     |
+| `ListModelContext`       | Return active model name, path, and project info.                       |
+| `ListSheets`             | List all Revit sheets.                                                  |
+| `ListSchedules`          | List all schedules in the model.                                        |
+| `ListViews`              | List all Revit views.                                                   |
+| `ModifyElements`         | Update types and/or parameters for elements.                            |
+| `NewSharedParameter`     | Create and bind a shared parameter to categories.                       |
+| `PlaceViewsOnSheet`      | Place view(s) on a sheet with layout options.                           |
+| `QuerySqlCommand.cs`     | Executes arbitrary SQL queries against the PostgreSQL database.         |
+| `SyncModelToSql`         | Save active model data to PostgreSQL for querying.                      |
 
-| Helper Files                   | Purpose                                                                        |
-| ------------------------------ | ------------------------------------------------------------------------------ |
-| `RevitHelpers.cs`              | Utility functions for element filtering and parameter setting.                 |
-| `UiHelpers.cs`                 | Revit UI utilities (e.g., `TaskDialog`).                                       |
+| Helper Files             | Purpose                                                                 |
+| ------------------------ | ----------------------------------------------------------------------- |
+| `RevitHelpers.cs`        | Utility functions for element filtering and parameter setting.          |
+| `UiHelpers.cs`           | Revit UI utilities (e.g., `TaskDialog`).                                |
 
 ---
 
+## Command Summary
+
+| Command                    | Required JSON fields                                                                            | Optional JSON fields                                                      | Resulting keys                                                                                                                                                                    |
+| -------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **CreateSheet**            | `action`, `title_block_name`                                                | –                                                                         | On success: `sheet_id`, `sheet_name`, `sheet_number`                                                                                                          |
+| **PlaceViewsOnSheet**      | `action`, `sheet_id`, `view_ids`                                            | `offsetRight` (mm)\                                   | `status`, `placed`, `unplaced`, `remaining_view_ids` and message\                                                                                             |
+| **NewSharedParameter**     | `action`, `parameter_name`, `parameter_group`, `categories`, `binding_type` | –                                                                         | `parameter`, `categories` on success or error details\                                                                                                        |
+| **ModifyElements**         | `action`, `changes` (JSON array)\                                           | –                                                                         | `status`, per-element results with `type_changed`, `updated_parameters`, `skipped_parameters`                                                                 |
+| **ListElementParameters**   | `action` plus `element_ids` (comma list) or selected elements\              | connection string options via `conn_file` etc.                            | `parameters` keyed by element id and `parameter_names` list\                                                                                                  |
+| **FilterByParameter**      | `action`, `param`, `value`, `input_elements` (JSON list)\                   | –                                                                         | `elements` list containing `{ Id, Name }` of matching elements\                                                                                               |
+| **ListElementsByCategory** | `action` (name `ListElementsByCategory`), `category` (defaults to Walls)\   | –                                                                         | `elements` list with id and name\                                                                                                                             |
+| **ExecutePlan**            | `action`, `steps` (array of sub-commands)\                                  | –                                                                         | `results` array containing each sub-command’s output; `status` overall\                                                                                       |
+| **AddViewFilter**          | `action`, `category`, `filter_name`, `parameter`, `value`                   | override options (`visible`, `color`, `line_pattern`, `fill_color`, etc.) | `filterId` on success, `status` and error info if failing\                                                                                                    |
+| **ListFamiliesAndTypes**      | `action` (`GetFamilyAndTypes`)                                                                  | `class_name` to filter, optional database connection                      | Returns `types` list with family, type, id, category, guid, doc\_id\                                                                                          |
+| **ListCategories**         | `action` plus a PostgreSQL connection string (via config/env/`conn_file`)\  | –                                                                         | `categories` list describing each Revit category\                                                                                                             |
+| **ListViews**              | `action` and DB connection string\                                          | –                                                                         | `views` list with metadata including scale and associated sheet id\                                                                                           |
+| **ListSheets**             | `action` and DB connection string\                                          | –                                                                         | `sheets` list with name, number and title block info\                                                                                                         |
+| **ListSchedules**          | `action` and DB connection string\                                          | –                                                                         | `schedules` list with id, name and category\                                                                                                                  |
+| **SyncModelToSql**         | `action` and DB connection string\                                          | –                                                                         | On success: `updated`, `model_name`, `project_info`, `project_parameters`, `guid`, `last_saved`; returns `up_to_date` if nothing changed\ |
+| **QuerySql**               | `action`, `sql` query, and DB connection string\                            | `params` (JSON object) for parameterized SQL queries\ | `results` from database query or error info\                                                                                                                  |
+| **ListModelContext**        | `action` only                                                                                   | –                                                                         | Returns model metadata including `model_name`, `guid`, `last_saved`, and lists of project parameters\                                                         |
+| **ExportToJson**           | `action` with optional `categories` list (defaults to Walls)\               | –                                                                         | `elements` (instance and type in their respective tables) array with id, name, category and parameter values\                                                                                                |
+
 ## Usage Examples
 
-### 🔹 Get Element Parameters
+### 🔹 List Element Parameters
 
 ```json
 {
-  "action": "GetElementParameters",
+  "action": "ListElementParameters",
   "element_ids": "123456,789012"
 }
 ```
@@ -116,11 +139,11 @@ future.
 }
 ```
 
-### 🔹 Get Model Context
+### 🔹 List Model Context
 
 ```json
 {
-  "action": "GetModelContext"
+  "action": "ListModelContext"
 }
 ```
 
@@ -179,11 +202,11 @@ future.
 }
 ```
 
-### 🔹 Get Families and Types
+### 🔹 List Families and Types
 
 ```json
 {
-  "action": "GetFamiliesAndTypes"
+  "action": "ListFamiliesAndTypes"
 }
 ```
 

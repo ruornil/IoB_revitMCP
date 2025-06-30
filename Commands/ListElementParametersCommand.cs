@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 
-public class GetElementParametersCommand : ICommand
+public class ListElementParametersCommand : ICommand
 {
     public Dictionary<string, object> Execute(UIApplication app, Dictionary<string, string> input)
     {

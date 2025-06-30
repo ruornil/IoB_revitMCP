@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-public class GetFamiliesAndTypesCommand : ICommand
+public class ListFamiliesAndTypesCommand : ICommand
 {
     public Dictionary<string, object> Execute(UIApplication app, Dictionary<string, string> input)
     {

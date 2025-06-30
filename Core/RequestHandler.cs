@@ -18,24 +18,24 @@ public class RequestHandler : IExternalEventHandler
 
     public static readonly Dictionary<string, ICommand> CommandMap = new Dictionary<string, ICommand>
     {
-        { "CreateSheet" , new CreateSheetCommand() },
-        { "PlaceViewsOnSheet", new PlaceViewsOnSheetCommand() },
-        { "NewSharedParameter", new NewSharedParameterCommand() },
-        { "ModifyElements", new ModifyElementsCommand() },
-        { "GetElementParameters", new GetElementParametersCommand() },
-        { "FilterByParameter", new FilterByParameterCommand() },
-        { "ListElementsByCategory", new ListElementsCommand() },
-        { "ExecutePlan", new PlanExecutorCommand() },
         { "AddViewFilter", new AddViewFilterCommand()},
-        { "GetFamilyAndTypes", new GetFamiliesAndTypesCommand()},
+        { "CreateSheet" , new CreateSheetCommand() },
+        { "ExecutePlan", new PlanExecutorCommand() },
+        { "ExportToJson" , new ExportToJsonCommand() },
+        { "FilterByParameter", new FilterByParameterCommand() },
+        { "ListElementParameters", new ListElementParametersCommand() },
         { "ListCategories", new ListCategoriesCommand()},
-        { "ListViews", new ListViewsCommand()},
-        { "ListSheets", new ListSheetsCommand()},
+        { "ListElementsByCategory", new ListElementsCommand() },
+        { "ListFamiliesAndTypes", new ListFamiliesAndTypesCommand()},
+        { "ListModelContext", new ListModelContextCommand()},
         { "ListSchedules", new ListSchedulesCommand()},
-        { "SyncModelToSql", new SyncModelToSqlCommand()},
+        { "ListSheets", new ListSheetsCommand()},
+        { "ListViews", new ListViewsCommand()},
+        { "ModifyElements", new ModifyElementsCommand() },
+        { "NewSharedParameter", new NewSharedParameterCommand() },
+        { "PlaceViewsOnSheet", new PlaceViewsOnSheetCommand() },
         { "QuerySql", new QuerySqlCommand()},
-        { "GetModelContext", new GetModelContextCommand()},
-        { "ExportToJson" , new ExportToJsonCommand() }
+        { "SyncModelToSql", new SyncModelToSqlCommand()}
     };
 
     public void SetRequest(string body, HttpListenerContext context)

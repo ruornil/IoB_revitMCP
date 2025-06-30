@@ -84,24 +84,24 @@ Use to send the structured commands defined below.
 
 | Command                  | Purpose                                                                 |
 |--------------------------|-------------------------------------------------------------------------|
-| `GetElementParameters`   | Retrieve parameters for specified elements.                             |
-| `CreateSheet`            | Create a new sheet with a given title block.                            |
-| `PlaceViewsOnSheet`      | Place view(s) on a sheet with layout options.                           |
-| `NewSharedParameter`     | Create and bind a shared parameter to categories.                       |
-| `ModifyElements`         | Update types and/or parameters for elements.                            |
-| `GetModelContext`        | Return active model name, path, and project info.                       |
-| `ExportToJson`           | Export selected categories to JSON.                                     |
 | `AddViewFilter`          | Add a graphical view filter based on a parameter rule.                  |
+| `CreateSheet`            | Create a new sheet with a given title block.                            |
 | `ExecutePlan`            | Chain multiple commands in a single plan.                               |
+| `ExportToJson`           | Export selected categories to JSON.                                     |
+| `FilterByParameter`      | Filter element list by a parameter's value.                             |
 | `ListCategories`         | List all Revit categories.                                              |
 | `ListElements`           | List all elements of a specified category.                              |
-| `GetFamiliesAndTypes`    | Retrieve all families and their types in the model.                     |
-| `ListViews`              | List all Revit views.                                                   |
+| `ListElementParameters`  | Retrieve parameters for specified elements.                             |
+| `ListFamiliesAndTypes`   | Retrieve all families and their types in the model.                     |
+| `ListModelContext`       | Return active model name, path, and project info.                       |
 | `ListSheets`             | List all Revit sheets.                                                  |
 | `ListSchedules`          | List all schedules in the model.                                        |
-| `FilterByParameter`      | Filter element list by a parameter's value.                             |
-| `SyncModelToSql`         | Save active model data to PostgreSQL for querying.                      |
+| `ListViews`              | List all Revit views.                                                   |
+| `ModifyElements`         | Update types and/or parameters for elements.                            |
+| `NewSharedParameter`     | Create and bind a shared parameter to categories.                       |
+| `PlaceViewsOnSheet`      | Place view(s) on a sheet with layout options.                           |
 | `QuerySqlCommand.cs`     | Executes arbitrary SQL queries against the PostgreSQL database.         |
+| `SyncModelToSql`         | Save active model data to PostgreSQL for querying.                      |
 
 **ExecutePlan** – chain multiple steps using prior results.
 
@@ -115,11 +115,11 @@ Use to send the structured commands defined below.
 { "action": "FilterByParameterCommand", "param": "FireRating", "value": "120", "input_elements": [...] }
 ```
 
-**GetParameters / GetParametersById** – extract parameters of selected elements.
+**ListParameters / ListParametersById** – extract parameters of elements with id or elements selected in the model.
 
 ```json
-{ "action": "GetParameters" }
-{ "action": "GetParametersById", "element_ids": "123,456" }
+{ "action": "ListParameters" }
+{ "action": "ListParameters", "element_ids": "123,456" }
 ```
 
 **SetParameters** – update parameter values.
