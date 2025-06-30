@@ -67,7 +67,8 @@ public class PostgresDb
                 type_name = EXCLUDED.type_name,
                 level = EXCLUDED.level,
                 doc_id = EXCLUDED.doc_id,
-                last_seen = EXCLUDED.last_seen";
+                last_seen = EXCLUDED.last_seen
+            WHERE EXCLUDED.last_seen > revit_elements.last_seen";
 
         ExecuteNonQuery(sql,
             new NpgsqlParameter("@id", id),
@@ -90,7 +91,8 @@ public class PostgresDb
                 param_value = EXCLUDED.param_value,
                 is_type = EXCLUDED.is_type,
                 applicable_categories = EXCLUDED.applicable_categories,
-                last_saved = EXCLUDED.last_saved";
+                last_saved = EXCLUDED.last_saved
+            WHERE EXCLUDED.last_saved > revit_parameters.last_saved";
 
         ExecuteNonQuery(sql,
             new NpgsqlParameter("@elid", elementId),
@@ -111,7 +113,8 @@ public class PostgresDb
                 category_group = EXCLUDED.category_group,
                 description = EXCLUDED.description,
                 guid = EXCLUDED.guid,
-                last_saved = EXCLUDED.last_saved";
+                last_saved = EXCLUDED.last_saved
+            WHERE EXCLUDED.last_saved > revit_categories.last_saved";
 
         ExecuteNonQuery(sql,
             new NpgsqlParameter("@enum", enumVal),
@@ -137,7 +140,8 @@ public class PostgresDb
                 detail_level = EXCLUDED.detail_level,
                 associated_sheet_id = EXCLUDED.associated_sheet_id,
                 doc_id = EXCLUDED.doc_id,
-                last_saved = EXCLUDED.last_saved";
+                last_saved = EXCLUDED.last_saved
+            WHERE EXCLUDED.last_saved > revit_views.last_saved";
 
         ExecuteNonQuery(sql,
             new NpgsqlParameter("@id", id),
@@ -163,7 +167,8 @@ public class PostgresDb
                 number = EXCLUDED.number,
                 title_block = EXCLUDED.title_block,
                 doc_id = EXCLUDED.doc_id,
-                last_saved = EXCLUDED.last_saved";
+                last_saved = EXCLUDED.last_saved
+            WHERE EXCLUDED.last_saved > revit_sheets.last_saved";
 
         ExecuteNonQuery(sql,
             new NpgsqlParameter("@id", id),
@@ -185,7 +190,8 @@ public class PostgresDb
                 name = EXCLUDED.name,
                 category = EXCLUDED.category,
                 doc_id = EXCLUDED.doc_id,
-                last_saved = EXCLUDED.last_saved";
+                last_saved = EXCLUDED.last_saved
+            WHERE EXCLUDED.last_saved > revit_schedules.last_saved";
 
         ExecuteNonQuery(sql,
             new NpgsqlParameter("@id", id),
@@ -204,7 +210,8 @@ public class PostgresDb
             ON CONFLICT (name, family_type, category) DO UPDATE SET
                 guid = EXCLUDED.guid,
                 doc_id = EXCLUDED.doc_id,
-                last_saved = EXCLUDED.last_saved";
+                last_saved = EXCLUDED.last_saved
+            WHERE EXCLUDED.last_saved > revit_families.last_saved";
 
         ExecuteNonQuery(sql,
             new NpgsqlParameter("@name", name ?? (object)DBNull.Value),
@@ -227,7 +234,8 @@ public class PostgresDb
                 type_name = EXCLUDED.type_name,
                 category = EXCLUDED.category,
                 doc_id = EXCLUDED.doc_id,
-                last_seen = EXCLUDED.last_seen";
+                last_seen = EXCLUDED.last_seen
+            WHERE EXCLUDED.last_seen > revit_elementTypes.last_seen";
 
         ExecuteNonQuery(sql,
             new NpgsqlParameter("@id", id),
@@ -249,7 +257,8 @@ public class PostgresDb
                 guid = EXCLUDED.guid,
                 last_saved = EXCLUDED.last_saved,
                 project_info = EXCLUDED.project_info,
-                project_parameters = EXCLUDED.project_parameters";
+                project_parameters = EXCLUDED.project_parameters
+            WHERE EXCLUDED.last_saved > model_info.last_saved";
 
         var infoParam = new NpgsqlParameter("@info", projectInfo ?? (object)DBNull.Value)
         {
