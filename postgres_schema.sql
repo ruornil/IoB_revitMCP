@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS revit_elements (
     type_name TEXT,
     level TEXT,
     doc_id TEXT,
-    last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    last_saved TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Table: model_info
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS revit_elementTypes (
     type_name TEXT,
     category TEXT,
     doc_id TEXT,
-    last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    last_saved TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Table: revit_parameters

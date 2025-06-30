@@ -35,9 +35,9 @@ Remove the OST_ prefix from category names when querying.
 
 |Table         |Columns                                                           |
 |--------------|------------------------------------------------------------------|
-|revit_elements|id, guid, name, category, type_name, level, doc_id, last_seen     |
+|revit_elements|id, guid, name, category, type_name, level, doc_id, last_saved     |
 |model_info    |doc_id, model_name, guid, last_saved, project_info, project_parameters|
-|revit_elementtypes|id, guid, family, type_name, category, doc_id, last_seen|
+|revit_elementtypes|id, guid, family, type_name, category, doc_id, last_saved|
 |revit_parameters|id, element_id, param_name, param_value, is_type, applicable_categories|
 |revit_categories|id, enum, name, category_group, description, guid, last_saved|
 |revit_views|id, guid, name, view_type, scale, discipline, detail_level, associated_sheet_id, doc_id, last_saved|

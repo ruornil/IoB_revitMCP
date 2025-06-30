@@ -55,11 +55,11 @@ public class PostgresDb
     }
 
     public void UpsertElement(int id, Guid guid, string name, string category,
-        string typeName, string level, string docId, DateTime lastSeen)
+        string typeName, string level, string docId, DateTime lastSaved)
     {
         string sql = @"INSERT INTO revit_elements
-            (id, guid, name, category, type_name, level, doc_id, last_seen)
-            VALUES (@id, @guid, @name, @category, @type_name, @level, @doc_id, @last_seen)
+            (id, guid, name, category, type_name, level, doc_id, last_saved)
+            VALUES (@id, @guid, @name, @category, @type_name, @level, @doc_id, @last_saved)
             ON CONFLICT (id) DO UPDATE SET
                 guid = EXCLUDED.guid,
                 name = EXCLUDED.name,
@@ -67,8 +67,8 @@ public class PostgresDb
                 type_name = EXCLUDED.type_name,
                 level = EXCLUDED.level,
                 doc_id = EXCLUDED.doc_id,
-                last_seen = EXCLUDED.last_seen
-            WHERE EXCLUDED.last_seen > revit_elements.last_seen";
+                last_saved = EXCLUDED.last_saved
+            WHERE EXCLUDED.last_saved > revit_elements.last_saved";
 
         ExecuteNonQuery(sql,
             new NpgsqlParameter("@id", id),
@@ -78,7 +78,7 @@ public class PostgresDb
             new NpgsqlParameter("@type_name", typeName ?? (object)DBNull.Value),
             new NpgsqlParameter("@level", level ?? (object)DBNull.Value),
             new NpgsqlParameter("@doc_id", docId ?? (object)DBNull.Value),
-            new NpgsqlParameter("@last_seen", lastSeen));
+            new NpgsqlParameter("@last_saved", lastSaved));
     }
 
     public void UpsertParameter(int elementId, string name, string value, bool isType,
@@ -223,19 +223,19 @@ public class PostgresDb
     }
 
     public void UpsertElementType(int id, Guid guid, string family, string typeName,
-        string category, string docId, DateTime lastSeen)
+        string category, string docId, DateTime lastSaved)
     {
         string sql = @"INSERT INTO revit_elementTypes
-            (id, guid, family, type_name, category, doc_id, last_seen)
-            VALUES (@id, @guid, @family, @type_name, @category, @doc_id, @last_seen)
+            (id, guid, family, type_name, category, doc_id, last_saved)
+            VALUES (@id, @guid, @family, @type_name, @category, @doc_id, @last_saved)
             ON CONFLICT (id) DO UPDATE SET
                 guid = EXCLUDED.guid,
                 family = EXCLUDED.family,
                 type_name = EXCLUDED.type_name,
                 category = EXCLUDED.category,
                 doc_id = EXCLUDED.doc_id,
-                last_seen = EXCLUDED.last_seen
-            WHERE EXCLUDED.last_seen > revit_elementTypes.last_seen";
+                last_saved = EXCLUDED.last_saved
+            WHERE EXCLUDED.last_saved > revit_elementTypes.last_saved";
 
         ExecuteNonQuery(sql,
             new NpgsqlParameter("@id", id),
@@ -244,7 +244,7 @@ public class PostgresDb
             new NpgsqlParameter("@type_name", typeName ?? (object)DBNull.Value),
             new NpgsqlParameter("@category", category ?? (object)DBNull.Value),
             new NpgsqlParameter("@doc_id", docId ?? (object)DBNull.Value),
-            new NpgsqlParameter("@last_seen", lastSeen));
+            new NpgsqlParameter("@last_saved", lastSaved));
     }
 
     public void UpsertModelInfo(string docId, string modelName, Guid guid, DateTime lastSaved, string projectInfo = null, string projectParameters = null)
