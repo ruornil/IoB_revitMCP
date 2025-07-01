@@ -61,38 +61,39 @@ Executes commands in Revit.
 
 | Command                  | Purpose                                                                 |
 |--------------------------|-------------------------------------------------------------------------|
-| `AddViewFilter`          | Add a graphical view filter based on a parameter rule.                  |
-| `CreateSheet`            | Create a new sheet with a given title block.                            |
-| `ExecutePlan`            | Chain multiple commands in a single plan.                               |
-| `ExportToJson`           | Export selected categories to JSON.                                     |
-| `FilterByParameter`      | Filter element list by a parameter's value.                             |
-| `ListCategories`         | List all Revit categories.                                              |
-| `ListElementParameters`  | Retrieve parameters for specified elements.                             |
-| `ListElements`           | List all elements of a specified category.                              |
-| `ListFamiliesAndTypes`   | Retrieve all families and their types in the model.                     |
-| `ListModelContext`       | Return active model name, path, and project info.                       |
-| `ListSheets`             | List all Revit sheets.                                                  |
-| `ListSchedules`          | List all schedules in the model.                                        |
-| `ListViews`              | List all Revit views.                                                   |
-| `ModifyElements`         | Update types and/or parameters for elements.                            |
-| `NewSharedParameter`     | Create and bind a shared parameter to categories.                       |
-| `PlaceViewsOnSheet`      | Place view(s) on a sheet with layout options.                           |
-| `QuerySqlCommand.cs`     | Executes arbitrary SQL queries against the PostgreSQL database.         |
-| `SyncModelToSql`         | Save active model data to PostgreSQL for querying.                      |
+| `AddViewFilter`          | Add a graphical view filter based on a parameter rule. |
+| `CreateSheet`            | Create a new sheet with a given title block. |
+| `EnqueuePlan`            | Queue a multi-step plan for background execution. |
+| `ExecutePlan`            | Chain multiple commands in a single plan. |
+| `ExportToJson`           | Export selected categories to JSON. |
+| `FilterByParameter`      | Filter element list by a parameter's value. |
+| `ListCategories`         | List all Revit categories. |
+| `ListElementParameters`  | Retrieve parameters for specified elements. |
+| `ListElementsByCategory` | List all elements of a specified category. |
+| `ListFamiliesAndTypes`   | Retrieve all families and their types in the model. |
+| `ListModelContext`       | Return active model name, path, and project info. |
+| `ListSheets`             | List all Revit sheets. |
+| `ListSchedules`          | List all schedules in the model. |
+| `ListViews`              | List all Revit views. |
+| `ModifyElements`         | Update types and/or parameters for elements. |
+| `NewSharedParameter`     | Create and bind a shared parameter to categories. |
+| `PlaceViewsOnSheet`      | Place view(s) on a sheet with layout options. |
+| `QuerySql`               | Executes arbitrary SQL queries against the PostgreSQL database. |
+| `SyncModelToSql`         | Save active model data to PostgreSQL for querying. |
 
 ### Command Examples
 
 ```json
 { "action": "ExecutePlan", "steps": [...] }
 { "action": "ListElementsByCategory", "category": "Walls" }
-{ "action": "FilterByParameterCommand", "param": "FireRating", "value": "120", "input_elements": [...] }
-{ "action": "ListParameters" }
-{ "action": "ListParameters", "element_ids": "123,456" }
-{ "action": "SetParameters", "element_ids": "[123]", "parameters": "{"Mark": "Wall-A"}" }
+{ "action": "FilterByParameter", "param": "FireRating", "value": "120", "input_elements": [...] }
+{ "action": "ListElementParameters" }
+{ "action": "ListElementParameters", "element_ids": "123,456" }
+{ "action": "ModifyElements", "changes": [ { "element_id": 123, "parameters": { "Mark": "Wall-A" } } ] }
 { "action": "NewSharedParameter", "parameter_name": "...", "categories": "Walls" }
-{ "action": "ChangeFamilyAndType", "element_ids": "...", "new_type_name": "..." }
+{ "action": "ModifyElements", "changes": [ { "element_id": 200, "new_type_name": "New Type" } ] }
 { "action": "CreateSheet", "title_block_name": "A1" }
 { "action": "PlaceViewsOnSheet", "sheet_id": 111, "view_ids": "101,102" }
 { "action": "AddViewFilter", "category": "Walls", "filter_name": "ColoredExternalWalls", "parameter": "Top is Attached", "value": "No", "visible": "true", "color": "255,0,0",  "line_pattern": "Dashed", "fill_color": "255,255,0", "fill_pattern": "Solid Fill" }
-{ "action": "GetProjectInfo" }
+{ "action": "ListModelContext" }
 ```

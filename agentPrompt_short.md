@@ -94,24 +94,25 @@ Use to send the structured commands defined below.
 
 | Command                  | Purpose                                                                 |
 |--------------------------|-------------------------------------------------------------------------|
-| `AddViewFilter`          | Add a graphical view filter based on a parameter rule.                  |
-| `CreateSheet`            | Create a new sheet with a given title block.                            |
-| `ExecutePlan`            | Chain multiple commands in a single plan.                               |
-| `ExportToJson`           | Export selected categories to JSON.                                     |
-| `FilterByParameter`      | Filter element list by a parameter's value.                             |
-| `ListCategories`         | List all Revit categories.                                              |
-| `ListElements`           | List all elements of a specified category.                              |
-| `ListElementParameters`  | Retrieve parameters for specified elements.                             |
-| `ListFamiliesAndTypes`   | Retrieve all families and their types in the model.                     |
-| `ListModelContext`       | Return active model name, path, and project info.                       |
-| `ListSheets`             | List all Revit sheets.                                                  |
-| `ListSchedules`          | List all schedules in the model.                                        |
-| `ListViews`              | List all Revit views.                                                   |
-| `ModifyElements`         | Update types and/or parameters for elements.                            |
-| `NewSharedParameter`     | Create and bind a shared parameter to categories.                       |
-| `PlaceViewsOnSheet`      | Place view(s) on a sheet with layout options.                           |
-| `QuerySqlCommand.cs`     | Executes arbitrary SQL queries against the PostgreSQL database.         |
-| `SyncModelToSql`         | Save active model data to PostgreSQL for querying.                      |
+| `AddViewFilter`          | Add a graphical view filter based on a parameter rule. |
+| `CreateSheet`            | Create a new sheet with a given title block. |
+| `EnqueuePlan`            | Queue a multi-step plan for background execution. |
+| `ExecutePlan`            | Chain multiple commands in a single plan. |
+| `ExportToJson`           | Export selected categories to JSON. |
+| `FilterByParameter`      | Filter element list by a parameter's value. |
+| `ListCategories`         | List all Revit categories. |
+| `ListElementsByCategory` | List all elements of a specified category. |
+| `ListElementParameters`  | Retrieve parameters for specified elements. |
+| `ListFamiliesAndTypes`   | Retrieve all families and their types in the model. |
+| `ListModelContext`       | Return active model name, path, and project info. |
+| `ListSheets`             | List all Revit sheets. |
+| `ListSchedules`          | List all schedules in the model. |
+| `ListViews`              | List all Revit views. |
+| `ModifyElements`         | Update types and/or parameters for elements. |
+| `NewSharedParameter`     | Create and bind a shared parameter to categories. |
+| `PlaceViewsOnSheet`      | Place view(s) on a sheet with layout options. |
+| `QuerySql`               | Executes arbitrary SQL queries against the PostgreSQL database. |
+| `SyncModelToSql`         | Save active model data to PostgreSQL for querying. |
 
 **ExecutePlan** – chain multiple steps using prior results.
 
@@ -119,37 +120,29 @@ Use to send the structured commands defined below.
 { "action": "ExecutePlan", "steps": [{ "action": "...", "params": { ... }}] }
 ```
 
-**FilterByParameterCommand** – filter a list of elements by a parameter value.
+**FilterByParameter** – filter a list of elements by a parameter value.
 
 ```json
-{ "action": "FilterByParameterCommand", "param": "FireRating", "value": "120", "input_elements": [...] }
+{ "action": "FilterByParameter", "param": "FireRating", "value": "120", "input_elements": [...] }
 ```
 
-**ListParameters / ListParametersById** – extract parameters of elements with id or elements selected in the model.
+**ListElementParameters** – extract parameters of elements with id or elements selected in the model.
 
 ```json
-{ "action": "ListParameters" }
-{ "action": "ListParameters", "element_ids": "123,456" }
+{ "action": "ListElementParameters" }
+{ "action": "ListElementParameters", "element_ids": "123,456" }
 ```
 
-**SetParameters** – update parameter values.
+**ModifyElements** – update parameter values.
 
 ```json
-{ "action": "SetParameters", "element_ids": "[123]", "parameters": "{\"Mark\": \"Wall-A\"}" }
+{ "action": "ModifyElements", "changes": [ { "element_id": 123, "parameters": { "Mark": "Wall-A" } } ] }
 ```
 
 **NewSharedParameter** – add a shared parameter to a category.
 
 ```json
 { "action": "NewSharedParameter", "parameter_name": "...", "categories": "Walls", ... }
-```
-
-**ChangeFamilyAndType** – change the type of specified elements.
-
-```json
-{ "action": "ChangeFamilyAndType", "element_ids": "...", "new_type_name": "..." }
-```
-
 **CreateSheet** – create sheets.
 
 ```json
@@ -162,7 +155,7 @@ Use to send the structured commands defined below.
 { "action": "PlaceViewsOnSheet", "sheet_id": 111, "view_ids": "101,102","offsetRight": "120" }
 ```
 
-**AddViewFilterCommand** – create a parameter-based view filter.
+**AddViewFilter** – create a parameter-based view filter.
 
 ```json
 { "action": "AddViewFilter",

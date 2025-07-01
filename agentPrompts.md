@@ -38,30 +38,24 @@ Use this tool to send structured JSON data to interact with Revit model with bel
 **Command Index**:
 
 - [ExecutePlan](#command-executeplan)
-
-- [ChangeFamilyAndType](#command-changefamilyandtype)
-
-- [GetFamilyAndTypes](#command-getfamilyandtypes)
-
-- [CreateSheet](#command-createsheet)
-
-- [PlaceViewsOnSheet](#command-placeviewsonsheet)
-
-- [NewSharedParameter](#command-newsharedparameter)
-
-- [SetParameter](#command-setparameter)
-
-- [AddViewFilterCommand](#command-addviewfiltercommand)
-
-- [GetParameters](#command-getparameters)
-
-- [GetParametersByID](#command-getparametersbyid)
-
+- [EnqueuePlan](#command-enqueueplan)
+- [ExportToJson](#command-exporttojson)
+- [QuerySql](#command-querysql)
+- [SyncModelToSql](#command-syncmodeltosql)
+- [ListCategories](#command-listcategories)
 - [ListElementsByCategory](#command-listelementsbycategory)
-
-- [FilterByParameterCommand](#command-filterbyparametercommand)
-
-- [GetProjectInfo](#command-getprojectinfo)
+- [FilterByParameter](#command-filterbyparameter)
+- [ListElementParameters](#command-listelementparameters)
+- [ListFamiliesAndTypes](#command-listfamiliesandtypes)
+- [ListModelContext](#command-listmodelcontext)
+- [ListViews](#command-listviews)
+- [ListSheets](#command-listsheets)
+- [ListSchedules](#command-listschedules)
+- [ModifyElements](#command-modifyelements)
+- [CreateSheet](#command-createsheet)
+- [PlaceViewsOnSheet](#command-placeviewsonsheet)
+- [AddViewFilter](#command-addviewfilter)
+- [NewSharedParameter](#command-newsharedparameter)
 
 This document defines the usage format for each command in the MCP plugin, enabling AI agents to interact with Revit via HTTP requests.
 
@@ -102,54 +96,38 @@ Used when the AI agent wants to automate multi-step workflows like filtering wal
 
 ---
 
-### Command: ChangeFamilyAndType
+### Command: EnqueuePlan
 
 **Purpose**:
 
-Update the type—and thereby potentially the family—of one or more Revit elements, based on the name of a target element type.
+Queues a multi-step plan for asynchronous execution. The plan is stored in the `mcp_queue` table and processed later by the add-in.
 
 **Inputs**:
 
-- `element_ids` (string): Comma-separated list of Revit element IDs whose type should be updated.
-- `new_type_name` (string): The name of the new element type to apply (must match a type in the document).
+- `plan` (string): JSON array describing each step (same structure as `ExecutePlan`).
+- `conn_file` or other connection fields to locate the PostgreSQL connection string.
 
 **Expected Output**:
 
-A JSON object with:
-
-- `status`: "partial_success" or "error"
-- `changed`: List of element IDs successfully updated
-- `failed`: List of element IDs that could not be updated
+- `status`: "queued" on success
+- `job_id`: integer identifier for the queued job
 
 **Usage Example**:
 
 ```json
 {
-  "action": "ChangeFamilyAndType",
-  "element_ids": "123456,123457,123458",
-  "new_type_name": "36\" x 84\""
+  "action": "EnqueuePlan",
+  "plan": "[{ \"action\": \"ListElementsByCategory\", \"params\":{\"category\":\"Walls\"}}]",
+  "conn_file": "revit-conn.txt"
 }
 ```
 
 **Typical Use Case for AI Agent**:
-
-Use this command when:
-
-- A set of elements need to be switched to a different size, type, or family variation (e.g., resizing all selected doors).
-
-- The user references elements by ID and provides the new type name exactly as defined in the project.
-
-**Notes for Agent**:
-
-- Do not attempt this unless both element_ids and new_type_name are present.
-
-- You must use the exact type name as it appears in Revit’s type selector.
-
-- This command can change families if Revit allows type substitution across them.
+Use when a long-running plan should run in the background without blocking the user.
 
 ---
 
-### Command: GetFamilyAndTypes
+### Command: ListFamiliesAndTypes
 
 **Purpose**:
 
@@ -175,20 +153,20 @@ A JSON object with:
 
 ```json
 {
-  "action": "GetFamilyAndTypes"
+  "action": "ListFamiliesAndTypes"
 }
 ```
 
 ```json
 {
-  "action": "GetFamilyAndTypes",
+  "action": "ListFamiliesAndTypes",
   "class_name": "FamilySymbol"
 }
 ```
 
 **Typical Use Case for AI Agent**:
 
-- To learn which types are assignable before executing `ChangeFamilyAndType`, `CreateSheet`.
+- To learn which types are assignable before executing `ModifyElements` or `CreateSheet`.
 - To validate whether a user-supplied type name actually exists.
 - To build a contextual reference map for assigning or recommending types.
 
@@ -257,7 +235,7 @@ Places multiple views on a specified sheet, starting from the bottom-right and s
 
 ---
 
-### Command: AddViewFilterCommand
+### Command: AddViewFilter
 
 **Purpose**:
 Adds a view filter to the active view, allowing users to isolate or highlight elements based on parameter values or categories.
@@ -278,7 +256,7 @@ Adds a view filter to the active view, allowing users to isolate or highlight el
 
 ```json
 {
-  "action": "AddViewFilterCommand",
+  "action": "AddViewFilter",
   "filterName": "Fire Rated Walls",
   "category": "Walls",
   "parameter": "FireRating",
@@ -328,92 +306,61 @@ Use this tool to add a new shared parameter to a category of elements, preparing
 
 ---
 
-### Command: SetParameter
+### Command: ModifyElements
 
 **Purpose**:
-Sets the value of one or more parameters for one or more elements in the model.
+Update element types and parameter values.
 
 **Inputs**:
 
-- `element_ids`: (list of int) — List of element IDs to apply the parameter changes to.
-- `parameters`: (object) — Dictionary of parameter name/value pairs to set.
+- `changes`: JSON array with each item containing `element_id`, optional `new_type_name`, and optional `parameters`.
 
 **Expected Output**:
 
 - `status`: "success" or "error"
-- `updated`: number of elements updated
+- per-element results detailing updates
 
 **Usage Example**:
 
 ```json
 {
-  "action": "SetParameters",
-  "element_ids": "[12345, 67890]",
-  "parameters": "{\"Mark\": \"Wall-A1\", \"Comments\": \"Checked\"}"
+  "action": "ModifyElements",
+  "changes": [
+    { "element_id": 12345, "new_type_name": "36\" x 84\"" },
+    { "element_id": 12345, "parameters": { "Mark": "Wall-A1" } }
+  ]
 }
 ```
 
 **Typical Use Case for AI Agent**:
-Use this tool to batch-assign or update parameter values on selected elements after a filtering or categorization step, enabling semantic enrichment of the model.
+Apply type changes or batch parameter updates after filtering elements.
 
 ---
 
 ---
 
-### Command: GetParameters
+### Command: ListElementParameters
 
 **Purpose**:
-Extracts all parameters and their values from the currently selected element in the Revit model.
+Retrieve parameters for specified elements or the current selection.
 
 **Inputs**:
 
-- (No explicit inputs required; relies on the user selection in the UI.)
+- `element_ids` (optional, string): comma-separated list of element IDs. If omitted, uses the current selection.
 
 **Expected Output**:
 
 - `status`: "success" or "error"
-- `parameters`: a dictionary of parameter names and their string values
+- `parameters`: dictionary keyed by element id
 
 **Usage Example**:
 
 ```json
-{
-  "action": "GetParameters"
-}
+{ "action": "ListElementParameters", "element_ids": "123,456" }
 ```
 
 **Typical Use Case for AI Agent**:
-Use this tool to get parameters of the selected object to understand the data schema or properties of a selected Revit element before performing further analysis or parameter updates.
-When an AI Agent needs to understand the data schema or properties of a selected Revit element before performing further analysis or parameter updates.
-
----
-
-### Command: GetParametersByID
-
-**Purpose**:
-Extracts all parameters and their values from the element or elemets by ID in the Revit model.
-
-**Inputs**:
-
-- `element_id` : (string or array) a string or an array of strings with element ids.
-
-**Expected Output**:
-
-- `status`: "success" or "error"
-- `parameters`: a dictionary of parameter names and their string values
-
-**Usage Example**:
-
-```json
-{
-  "action": "GetParametersById",
-  "element_ids": "123456,789012"
-}
-```
-
-**Typical Use Case for AI Agent**:
-Use this tool to get parameters of the objects by ids to understand the data schema or properties of a Revit element before performing further analysis or parameter updates.
-When an AI Agent needs to understand the data schema or properties of a Revit element before performing further analysis or parameter updates.
+Use after selecting or listing elements to inspect parameter values.
 
 ---
 
@@ -446,7 +393,7 @@ Used to fetch a list of elements for filtering, inspection, or mass editing. Com
 
 ---
 
-### Command: FilterByParameterCommand
+### Command: FilterByParameter
 
 **Purpose**:
 Filters a list of elements by matching a specific parameter value.
@@ -466,7 +413,7 @@ Filters a list of elements by matching a specific parameter value.
 
 ```json
 {
-  "action": "FilterByParameterCommand",
+  "action": "FilterByParameter",
   "param": "Comments",
   "value": "Fire Rated",
   "input_elements": "[{\"Id\": 123}, {\"Id\": 456}]"
@@ -479,7 +426,7 @@ Used after `ListElementsByCategory` to narrow down results based on metadata. Id
 
 ---
 
-### Command: GetProjectInfo
+### Command: ListModelContext
 
 **Purpose**:
 Retrieves model-level metadata including the model name, last saved time, and project information parameters. This is useful for tracking changes to the model, caching AI context, and triggering metadata-aware workflows.
@@ -504,7 +451,7 @@ A JSON object with:
 
 ```json
 {
-  "action": "GetProjectInfo"
+  "action": "ListModelContext"
 }
 ```
 
