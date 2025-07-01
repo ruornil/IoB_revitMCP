@@ -21,6 +21,8 @@ future.
 * **Vector Search Tools** – resolve category names or API concepts with `RevitBuiltinCategories` and `RevitApiVectorDB`.
 * **Plan Execution** – chain multiple commands in a single request.
 * **LLM Integration** – use the provided n8n workflow to translate chat messages into commands.
+* **Async Queue** – long-running plans can be queued via `EnqueuePlan` and executed in the background.
+* **In-memory Caching** – frequently used metadata like views and parameter bindings are cached per model session.
 
 ---
 
@@ -262,6 +264,18 @@ future.
   "params": "{ \"cat\": \"Walls\" }"
 }
 ```
+
+### 🔹 Queue a Plan for Async Execution
+
+```json
+{
+  "action": "EnqueuePlan",
+  "plan": "[{ \"action\": \"ListElements\", \"params\":{\"category\":\"Walls\"}}]",
+  "conn_file": "revit-conn.txt"
+}
+```
+
+Queued plans run in the background and results are stored in the `mcp_queue` table.
 
 ## 🔌 Configuring the PostgreSQL Connection
 

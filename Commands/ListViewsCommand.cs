@@ -21,20 +21,30 @@ public class ListViewsCommand : ICommand
         try
         {
             string conn = DbConfigHelper.GetConnectionString(input);
-            if (string.IsNullOrEmpty(conn))
+            PostgresDb db = null;
+            if (!string.IsNullOrEmpty(conn))
+                db = new PostgresDb(conn);
+
+            DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
+
+            if (ModelCache.TryGet(doc.PathName + "/views", lastSaved, out List<Dictionary<string, object>> cached))
             {
-                response["status"] = "error";
-                response["message"] = "No connection string found. " + DbConfigHelper.GetHelpMessage();
+                response["status"] = "success";
+                response["views"] = cached;
                 return response;
             }
 
-            PostgresDb db = new PostgresDb(conn);
-            DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
-            if (db.GetModelLastSaved(doc.PathName) == lastSaved)
+            if (db != null && db.GetModelLastSaved(doc.PathName) == lastSaved)
             {
                 response["status"] = "up_to_date";
                 return response;
             }
+
+            var viewports = new FilteredElementCollector(doc)
+                .OfClass(typeof(Viewport))
+                .Cast<Viewport>()
+                .GroupBy(v => v.ViewId.IntegerValue)
+                .ToDictionary(g => g.Key, g => (int?)g.First().SheetId.IntegerValue);
 
             var views = new FilteredElementCollector(doc)
                 .OfClass(typeof(View))
@@ -55,15 +65,19 @@ public class ListViewsCommand : ICommand
                 item["discipline"] = discipline;
 
                 item["detail_level"] = view.DetailLevel.ToString();
-                var vp = new FilteredElementCollector(doc).OfClass(typeof(Viewport)).Cast<Viewport>().FirstOrDefault(v => v.ViewId == view.Id);
-                item["associated_sheet_id"] = vp != null ? (int?)vp.SheetId.IntegerValue : null;
+                viewports.TryGetValue(view.Id.IntegerValue, out int? sheetId);
+                item["associated_sheet_id"] = sheetId;
                 item["doc_id"] = doc.PathName;
                 result.Add(item);
 
-                int? sheetId = vp != null ? (int?)vp.SheetId.IntegerValue : null;
-                db.UpsertView(view.Id.IntegerValue, Guid.Empty, view.Name, view.ViewType.ToString(), view.Scale, discipline, view.DetailLevel.ToString(), sheetId, doc.PathName, lastSaved);
+                if (db != null)
+                    db.UpsertView(view.Id.IntegerValue, Guid.Empty, view.Name, view.ViewType.ToString(), view.Scale, discipline, view.DetailLevel.ToString(), sheetId, doc.PathName, lastSaved);
             }
-            db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved);
+
+            if (db != null)
+                db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved);
+
+            ModelCache.Set(doc.PathName + "/views", lastSaved, result);
             response["status"] = "success";
             response["views"] = result;
         }

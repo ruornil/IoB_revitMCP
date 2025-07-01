@@ -16,6 +16,16 @@ public class PlanExecutorCommand : ICommand
         var doc = app.ActiveUIDocument.Document;
         var results = new List<object>();
 
+        string conn = DbConfigHelper.GetConnectionString(input);
+        if (input.TryGetValue("async", out var asyncFlag) && asyncFlag == "true" && !string.IsNullOrEmpty(conn))
+        {
+            var db = new PostgresDb(conn);
+            int id = db.EnqueuePlan(input["steps"]);
+            response["status"] = "queued";
+            response["job_id"] = id;
+            return response;
+        }
+
         try
         {
             if (!input.ContainsKey("steps"))
