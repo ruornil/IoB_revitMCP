@@ -96,4 +96,12 @@ Executes commands in Revit.
 { "action": "PlaceViewsOnSheet", "sheet_id": 111, "view_ids": "101,102" }
 { "action": "AddViewFilter", "category": "Walls", "filter_name": "ColoredExternalWalls", "parameter": "Top is Attached", "value": "No", "visible": "true", "color": "255,0,0",  "line_pattern": "Dashed", "fill_color": "255,255,0", "fill_pattern": "Solid Fill" }
 { "action": "ListModelContext" }
+{ "action": "ListCategories" }
+{ "action": "ListFamiliesAndTypes" }
+{ "action": "ListSheets" }
+{ "action": "ListSchedules" }
+{ "action": "ListViews" }
+{ "action": "QuerySql", "sql": "SELECT * FROM revit_elements WHERE category = @cat", "params": "{ \"cat\": \"Walls\" }" }
+{ "action": "SyncModelToSql" }
+{ "action": "EnqueuePlan", "plan": "[{ \"action\": \"ListElementsByCategory\", \"params\":{\"category\":\"Walls\"}}]", "conn_file": "revit-conn.txt" }
 ```
