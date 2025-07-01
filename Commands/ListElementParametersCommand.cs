@@ -70,7 +70,6 @@ public class ListElementParametersCommand : ICommand
         var result = new Dictionary<string, object>();
         var paramNames = new HashSet<string>();
         DateTime now = DateTime.UtcNow;
-        DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
         foreach (var id in ids)
         {
             var element = doc.GetElement(id);
