@@ -69,25 +69,25 @@ future.
 
 ## Command Summary
 
-| Command                    | Required JSON fields                                                                            | Optional JSON fields                                                      | Resulting keys                                                                                                                                                                    |
-| -------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Command                    | Required JSON fields                                                        | Optional JSON fields                                                      | Resulting keys                                                                                                                            |
+| -------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | **AddViewFilter**          | `action`, `category`, `filter_name`, `parameter`, `value`                   | override options (`visible`, `color`, `line_pattern`, `fill_color`, etc.) | `filterId` on success, `status` and error info if failing\                                                                                |
 | **CreateSheet**            | `action`, `title_block_name`                                                | –                                                                         | On success: `sheet_id`, `sheet_name`, `sheet_number`                                                                                      |
 | **ExecutePlan**            | `action`, `steps` (array of sub-commands)\                                  | –                                                                         | `results` array containing each sub-command’s output; `status` overall\                                                                   |
-| **ExportToJson**           | `action` with optional `categories` list (defaults to Walls)\               | –                                                                         | `elements` (instance and type in their respective tables) array with id, name, category and parameter values\                                                                                                |
+| **ExportToJson**           | `action` with optional `categories` list (defaults to Walls)\               | –                                                                         | `elements` (instance and type in their respective tables) array with id, name, category and parameter values\                             |
 | **FilterByParameter**      | `action`, `param`, `value`, `input_elements` (JSON list)\                   | –                                                                         | `elements` list containing `{ Id, Name }` of matching elements\                                                                           |
 | **ListCategories**         | `action` plus a PostgreSQL connection string (via config/env/`conn_file`)\  | –                                                                         | `categories` list describing each Revit category\                                                                                         |
-| **ListElementParameters**   | `action` plus `element_ids` (comma list) or selected elements\              | connection string options via `conn_file` etc.                            | `parameters` keyed by element id and `parameter_names` list\                                                                             |
+| **ListElementParameters**  | `action` plus `element_ids` (comma list) or selected elements\              | connection string options via `conn_file` etc.                            | `parameters` keyed by element id and `parameter_names` list\                                                                              |
 | **ListElementsByCategory** | `action` (name `ListElementsByCategory`), `category` (defaults to Walls)\   | –                                                                         | `elements` list with id and name\                                                                                                         |
-| **ListFamiliesAndTypes**      | `action` (`GetFamilyAndTypes`)                                                                  | `class_name` to filter, optional database connection                      | Returns `types` list with family, type, id, category, guid, doc_id,info\                                                                                                         |
+| **ListFamiliesAndTypes**   | `action` (`GetFamilyAndTypes`)                                              | `class_name` to filter, optional database connection                      | Returns `types` list with family, type, id, category, guid, doc_id,info\                                                                  |
 | **ListSchedules**          | `action` and DB connection string\                                          | –                                                                         | `schedules` list with id, name and category\                                                                                              |
-| **ListModelContext**        | `action` only                                                                                   | –                                                                         | Returns model metadata including `model_name`, `guid`, `last_saved`, and lists of project parameters\                                                         |
+| **ListModelContext**       | `action` only                                                               | –                                                                         | Returns model metadata including `model_name`, `guid`, `last_saved`, and lists of project parameters\                                     |
 | **ListViews**              | `action` and DB connection string\                                          | –                                                                         | `views` list with metadata including scale and associated sheet id\                                                                       |
 | **ListSheets**             | `action` and DB connection string\                                          | –                                                                         | `sheets` list with name, number and title block                                                                                           |
 | **ModifyElements**         | `action`, `changes` (JSON array)\                                           | –                                                                         | `status`, per-element results with `type_changed`, `updated_parameters`, `skipped_parameters`                                             |
 | **NewSharedParameter**     | `action`, `parameter_name`, `parameter_group`, `categories`, `binding_type` | –                                                                         | `parameter`, `categories` on success or error details\                                                                                    |
-| **PlaceViewsOnSheet**      | `action`, `sheet_id`, `view_ids`                                            | `offsetRight` (mm)\                                   | `status`, `placed`, `unplaced`, `remaining_view_ids` and message\                                                                                             |
-| **QuerySql**               | `action`, `sql` query, and DB connection string\                            | `params` (JSON object) for parameterized SQL queries\ | `results` from database query or error info\                                                                                                                  |
+| **PlaceViewsOnSheet**      | `action`, `sheet_id`, `view_ids`                                            | `offsetRight` (mm)\                                                       | `status`, `placed`, `unplaced`, `remaining_view_ids` and message\                                                                         |
+| **QuerySql**               | `action`, `sql` query, and DB connection string\                            | `params` (JSON object) for parameterized SQL queries\                     | `results` from database query or error info\                                                                                              |
 | **SyncModelToSql**         | `action` and DB connection string\                                          | –                                                                         | On success: `updated`, `model_name`, `project_info`, `project_parameters`, `guid`, `last_saved`; returns `up_to_date` if nothing changed\ |
 
 ## Usage Examples
@@ -271,6 +271,8 @@ future.
 
 ### 🔹 Queue a Plan for Async Execution
 
+Queued plans run in the background and results are stored in the `mcp_queue` table.
+
 ```json
 {
   "action": "EnqueuePlan",
@@ -278,8 +280,6 @@ future.
   "conn_file": "revit-conn.txt"
 }
 ```
-
-Queued plans run in the background and results are stored in the `mcp_queue` table.
 
 ## 🔌 Configuring the PostgreSQL Connection
 

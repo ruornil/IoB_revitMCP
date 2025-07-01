@@ -20,6 +20,7 @@ public class RequestHandler : IExternalEventHandler
     {
         { "AddViewFilter", new AddViewFilterCommand()},
         { "CreateSheet" , new CreateSheetCommand() },
+        { "EnqueuePlan", new EnqueuePlanCommand() },
         { "ExecutePlan", new PlanExecutorCommand() },
         { "ExportToJson" , new ExportToJsonCommand() },
         { "FilterByParameter", new FilterByParameterCommand() },
@@ -35,8 +36,7 @@ public class RequestHandler : IExternalEventHandler
         { "NewSharedParameter", new NewSharedParameterCommand() },
         { "PlaceViewsOnSheet", new PlaceViewsOnSheetCommand() },
         { "QuerySql", new QuerySqlCommand()},
-        { "SyncModelToSql", new SyncModelToSqlCommand()},
-        { "EnqueuePlan", new EnqueuePlanCommand() }
+        { "SyncModelToSql", new SyncModelToSqlCommand()}
     };
 
     public void SetRequest(string body, HttpListenerContext context)
