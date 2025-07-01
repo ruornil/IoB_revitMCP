@@ -26,23 +26,28 @@ public class ListElementParametersCommand : ICommand
             db = new PostgresDb(conn);
 
         // Precompute project parameter categories from ParameterBindings
-        var parameterCategories = new Dictionary<string, List<string>>();
-        var bindingMap = doc.ParameterBindings;
-        var iterator = bindingMap.ForwardIterator();
-        iterator.Reset();
-        while (iterator.MoveNext())
+        DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
+        if (!ModelCache.TryGet(doc.PathName + "/paramCats", lastSaved, out Dictionary<string, List<string>> parameterCategories))
         {
-            Definition definition = iterator.Key;
-            ElementBinding binding = iterator.Current as ElementBinding;
-            if (definition == null || binding == null) continue;
-
-            var cats = new List<string>();
-            foreach (Category cat in binding.Categories)
+            parameterCategories = new Dictionary<string, List<string>>();
+            var bindingMap = doc.ParameterBindings;
+            var iterator = bindingMap.ForwardIterator();
+            iterator.Reset();
+            while (iterator.MoveNext())
             {
-                if (cat != null)
-                    cats.Add(cat.Name);
+                Definition definition = iterator.Key;
+                ElementBinding binding = iterator.Current as ElementBinding;
+                if (definition == null || binding == null) continue;
+
+                var cats = new List<string>();
+                foreach (Category cat in binding.Categories)
+                {
+                    if (cat != null)
+                        cats.Add(cat.Name);
+                }
+                parameterCategories[definition.Name] = cats;
             }
-            parameterCategories[definition.Name] = cats;
+            ModelCache.Set(doc.PathName + "/paramCats", lastSaved, parameterCategories);
         }
 
         var ids = new List<ElementId>();

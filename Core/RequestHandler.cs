@@ -35,7 +35,8 @@ public class RequestHandler : IExternalEventHandler
         { "NewSharedParameter", new NewSharedParameterCommand() },
         { "PlaceViewsOnSheet", new PlaceViewsOnSheetCommand() },
         { "QuerySql", new QuerySqlCommand()},
-        { "SyncModelToSql", new SyncModelToSqlCommand()}
+        { "SyncModelToSql", new SyncModelToSqlCommand()},
+        { "EnqueuePlan", new EnqueuePlanCommand() }
     };
 
     public void SetRequest(string body, HttpListenerContext context)
@@ -45,6 +46,7 @@ public class RequestHandler : IExternalEventHandler
 
     public void Execute(UIApplication app)
     {
+        QueueProcessor.Start(app);
         while (_requests.TryDequeue(out var req))
         {
             var requestBody = req.body;
