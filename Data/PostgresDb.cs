@@ -285,4 +285,46 @@ public class PostgresDb
             return dt;
         return null;
     }
+
+    // Queue helpers ------------------------------------------------------
+    public int EnqueuePlan(string planJson)
+    {
+        string sql = "INSERT INTO mcp_queue (plan) VALUES (@plan) RETURNING id";
+        using (var conn = new NpgsqlConnection(_connectionString))
+        using (var cmd = new NpgsqlCommand(sql, conn))
+        {
+            cmd.Parameters.AddWithValue("@plan", planJson);
+            conn.Open();
+            return (int)cmd.ExecuteScalar();
+        }
+    }
+
+    public (int id, string plan) DequeuePlan()
+    {
+        string sql = "DELETE FROM mcp_queue WHERE id = (SELECT id FROM mcp_queue WHERE status = 'pending' ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, plan";
+        using (var conn = new NpgsqlConnection(_connectionString))
+        using (var cmd = new NpgsqlCommand(sql, conn))
+        {
+            conn.Open();
+            using (var reader = cmd.ExecuteReader())
+            {
+                if (reader.Read())
+                {
+                    int id = reader.GetInt32(0);
+                    string plan = reader.GetString(1);
+                    return (id, plan);
+                }
+            }
+        }
+        return (0, null);
+    }
+
+    public void SetJobResult(int id, string status, string resultJson)
+    {
+        string sql = "UPDATE mcp_queue SET status=@s, completed_at=NOW(), result=@r WHERE id=@id";
+        ExecuteNonQuery(sql,
+            new NpgsqlParameter("@s", status),
+            new NpgsqlParameter("@r", (object)resultJson ?? DBNull.Value),
+            new NpgsqlParameter("@id", id));
+    }
 }

@@ -21,6 +21,7 @@ public class App : IExternalApplication
     public Result OnShutdown(UIControlledApplication app)
     {
         McpServer.Stop();
+        QueueProcessor.Stop();
         return Result.Succeeded;
     }
 }

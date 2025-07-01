@@ -101,3 +101,13 @@ CREATE TABLE IF NOT EXISTS revit_families (
     last_saved TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT unique_family_name_type UNIQUE (name, family_type, category)
 );
+
+-- Table: mcp_queue
+CREATE TABLE IF NOT EXISTS mcp_queue (
+    id SERIAL PRIMARY KEY,
+    plan JSONB,
+    status TEXT DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP,
+    result JSONB
+);
