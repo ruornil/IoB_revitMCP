@@ -169,3 +169,63 @@ Use to send the structured commands defined below.
   "fill_color": "255,255,0",
   "fill_pattern": "Solid Fill" }
 ```
+
+**ListCategories** – list all categories.
+
+```json
+{ "action": "ListCategories" }
+```
+
+**ListElementsByCategory** – retrieve all elements of a category.
+
+```json
+{ "action": "ListElementsByCategory", "category": "Walls" }
+```
+
+**ListFamiliesAndTypes** – list families and their types.
+
+```json
+{ "action": "ListFamiliesAndTypes" }
+```
+
+**ListModelContext** – get model metadata.
+
+```json
+{ "action": "ListModelContext" }
+```
+
+**ListViews** – list all views.
+
+```json
+{ "action": "ListViews" }
+```
+
+**ListSheets** – list all sheets.
+
+```json
+{ "action": "ListSheets" }
+```
+
+**ListSchedules** – list all schedules.
+
+```json
+{ "action": "ListSchedules" }
+```
+
+**QuerySql** – run custom SQL against synced data.
+
+```json
+{ "action": "QuerySql", "sql": "SELECT * FROM revit_elements WHERE category = @cat", "params": "{ \"cat\": \"Walls\" }" }
+```
+
+**SyncModelToSql** – export model data to PostgreSQL.
+
+```json
+{ "action": "SyncModelToSql" }
+```
+
+**EnqueuePlan** – queue a plan for asynchronous execution.
+
+```json
+{ "action": "EnqueuePlan", "plan": "[{ \"action\": \"ListElementsByCategory\", \"params\":{\"category\":\"Walls\"}}]", "conn_file": "revit-conn.txt" }
+```
