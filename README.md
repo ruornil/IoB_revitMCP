@@ -33,7 +33,7 @@ future.
 | `RequestHandler.cs`      | Routes incoming requests to appropriate ICommand implementations.       |
 | `ICommand.cs`            | Interface that all typed command classes implement.                     |
 
-| Command                  | Purpose                                                                 |
+| Command Files            | Purpose                                                                 |
 |------------------------- |------------------------------------------------------------------------ |
 | `AddViewFilter`          | Add a graphical view filter based on a parameter rule.                  |
 | `CreateSheet`            | Create a new sheet with a given title block.                            |
@@ -58,6 +58,10 @@ future.
 | ------------------------ | ----------------------------------------------------------------------- |
 | `RevitHelpers.cs`        | Utility functions for element filtering and parameter setting.          |
 | `UiHelpers.cs`           | Revit UI utilities (e.g., `TaskDialog`).                                |
+
+| Data Files               | Purpose                                                                 |
+| ------------------------ | ----------------------------------------------------------------------- |
+| `PostgresDb.cs`          | Utility to access upsert, modify, retrieve data from PostgresDB         |
 
 ---
 
