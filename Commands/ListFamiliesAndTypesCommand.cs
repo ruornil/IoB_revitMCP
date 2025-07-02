@@ -55,40 +55,48 @@ public class ListFamiliesAndTypesCommand : ICommand
                 .OfClass(filterType)
                 .Cast<ElementType>();
 
-            NpgsqlConnection openConn = null;
-            NpgsqlTransaction tx = null;
             if (db != null)
             {
-                openConn = new NpgsqlConnection(conn);
+                using var openConn = new NpgsqlConnection(conn);
                 openConn.Open();
-                tx = openConn.BeginTransaction();
-            }
+                using var tx = openConn.BeginTransaction();
 
-            foreach (var type in types)
-            {
-                if (type.FamilyName != null && type.Name != null)
+                foreach (var type in types)
                 {
-                    var item = new Dictionary<string, object>();
-                    item["family"] = type.FamilyName;
-                    item["type"] = type.Name;
-                    item["id"] = type.Id.IntegerValue.ToString();
-                    item["category"] = type.Category?.Name ?? string.Empty;
-                    item["guid"] = type.UniqueId;
-                    item["doc_id"] = doc.PathName;
-                    result.Add(item);
-
-                    if (db != null)
+                    if (type.FamilyName != null && type.Name != null)
                     {
+                        var item = new Dictionary<string, object>();
+                        item["family"] = type.FamilyName;
+                        item["type"] = type.Name;
+                        item["id"] = type.Id.IntegerValue.ToString();
+                        item["category"] = type.Category?.Name ?? string.Empty;
+                        item["guid"] = type.UniqueId;
+                        item["doc_id"] = doc.PathName;
+                        result.Add(item);
+
                         db.UpsertFamily(openConn, type.FamilyName, type.Name, type.Category?.Name ?? string.Empty, type.UniqueId, doc.PathName, lastSaved, tx);
                     }
                 }
-            }
 
-            if (db != null)
-            {
                 db.UpsertModelInfo(openConn, doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved, null, null, tx);
                 tx.Commit();
-                openConn.Close();
+            }
+            else
+            {
+                foreach (var type in types)
+                {
+                    if (type.FamilyName != null && type.Name != null)
+                    {
+                        var item = new Dictionary<string, object>();
+                        item["family"] = type.FamilyName;
+                        item["type"] = type.Name;
+                        item["id"] = type.Id.IntegerValue.ToString();
+                        item["category"] = type.Category?.Name ?? string.Empty;
+                        item["guid"] = type.UniqueId;
+                        item["doc_id"] = doc.PathName;
+                        result.Add(item);
+                    }
+                }
             }
 
             response["status"] = "success";

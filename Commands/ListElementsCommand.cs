@@ -26,25 +26,21 @@ public class ListElementsCommand : ICommand
             .WhereElementIsNotElementType();
 
         var elements = new List<Dictionary<string, object>>();
-        NpgsqlConnection openConn = null;
-        NpgsqlTransaction tx = null;
+
         if (db != null)
         {
-            openConn = new NpgsqlConnection(conn);
+            using var openConn = new NpgsqlConnection(conn);
             openConn.Open();
-            tx = openConn.BeginTransaction();
-        }
+            using var tx = openConn.BeginTransaction();
 
-        foreach (var e in collector)
-        {
-            var item = new Dictionary<string, object>();
-            item["id"] = e.Id.IntegerValue;
-            item["name"] = e.Name;
-            item["doc_id"] = doc.PathName;
-            elements.Add(item);
-
-            if (db != null)
+            foreach (var e in collector)
             {
+                var item = new Dictionary<string, object>();
+                item["id"] = e.Id.IntegerValue;
+                item["name"] = e.Name;
+                item["doc_id"] = doc.PathName;
+                elements.Add(item);
+
                 string typeName = string.Empty;
                 var et = doc.GetElement(e.GetTypeId()) as ElementType;
                 if (et != null) typeName = et.Name;
@@ -59,13 +55,20 @@ public class ListElementsCommand : ICommand
                 db.UpsertElement(openConn, e.Id.IntegerValue, ParseGuid(e.UniqueId), e.Name,
                     e.Category?.Name ?? string.Empty, typeName, levelName, doc.PathName, lastSaved, tx);
             }
-        }
 
-        if (db != null)
-        {
             db.UpsertModelInfo(openConn, doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved, null, null, tx);
             tx.Commit();
-            openConn.Close();
+        }
+        else
+        {
+            foreach (var e in collector)
+            {
+                var item = new Dictionary<string, object>();
+                item["id"] = e.Id.IntegerValue;
+                item["name"] = e.Name;
+                item["doc_id"] = doc.PathName;
+                elements.Add(item);
+            }
         }
 
         response["status"] = "success";

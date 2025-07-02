@@ -37,9 +37,9 @@ public class ListCategoriesCommand : ICommand
                 return response;
             }
 
-            NpgsqlConnection openConn = new NpgsqlConnection(conn);
+            using var openConn = new NpgsqlConnection(conn);
             openConn.Open();
-            var tx = openConn.BeginTransaction();
+            using var tx = openConn.BeginTransaction();
 
             foreach (Category cat in doc.Settings.Categories)
             {
@@ -55,7 +55,6 @@ public class ListCategoriesCommand : ICommand
             }
             db.UpsertModelInfo(openConn, doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved, null, null, tx);
             tx.Commit();
-            openConn.Close();
             response["status"] = "success";
             response["categories"] = categories;
         }

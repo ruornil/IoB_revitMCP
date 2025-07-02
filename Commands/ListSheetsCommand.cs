@@ -38,9 +38,9 @@ public class ListSheetsCommand : ICommand
             }
 
             var col = new FilteredElementCollector(doc).OfClass(typeof(ViewSheet)).Cast<ViewSheet>();
-            NpgsqlConnection openConn = new NpgsqlConnection(conn);
+            using var openConn = new NpgsqlConnection(conn);
             openConn.Open();
-            var tx = openConn.BeginTransaction();
+            using var tx = openConn.BeginTransaction();
             foreach (var sheet in col)
             {
                 var item = new Dictionary<string, object>();
@@ -58,7 +58,6 @@ public class ListSheetsCommand : ICommand
             }
             db.UpsertModelInfo(openConn, doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved, null, null, tx);
             tx.Commit();
-            openConn.Close();
             response["status"] = "success";
             response["sheets"] = sheets;
         }

@@ -165,7 +165,6 @@ public class ListElementParametersCommand : ICommand
         {
             db.UpsertModelInfo(openConn, doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved, null, null, tx);
             tx.Commit();
-            openConn.Close();
         }
         return response;
     }

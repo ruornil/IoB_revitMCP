@@ -52,43 +52,55 @@ public class ListViewsCommand : ICommand
                 .Cast<View>()
                 .Where(v => !v.IsTemplate);
 
-            NpgsqlConnection openConn = null;
-            NpgsqlTransaction tx = null;
             if (db != null)
             {
-                openConn = new NpgsqlConnection(conn);
+                using var openConn = new NpgsqlConnection(conn);
                 openConn.Open();
-                tx = openConn.BeginTransaction();
-            }
+                using var tx = openConn.BeginTransaction();
 
-            foreach (var view in views)
-            {
-                var item = new Dictionary<string, object>();
-                item["id"] = view.Id.IntegerValue;
-                item["guid"] = view.UniqueId;
-                item["name"] = view.Name;
-                item["view_type"] = view.ViewType.ToString();
-                item["scale"] = view.Scale;
+                foreach (var view in views)
+                {
+                    var item = new Dictionary<string, object>();
+                    item["id"] = view.Id.IntegerValue;
+                    item["guid"] = view.UniqueId;
+                    item["name"] = view.Name;
+                    item["view_type"] = view.ViewType.ToString();
+                    item["scale"] = view.Scale;
 
-                // Discipline is not available in Revit 2023, so use a placeholder
-                string discipline = "Unknown";
-                item["discipline"] = discipline;
+                    // Discipline is not available in Revit 2023, so use a placeholder
+                    string discipline = "Unknown";
+                    item["discipline"] = discipline;
 
-                item["detail_level"] = view.DetailLevel.ToString();
-                viewports.TryGetValue(view.Id.IntegerValue, out int? sheetId);
-                item["associated_sheet_id"] = sheetId;
-                item["doc_id"] = doc.PathName;
-                result.Add(item);
+                    item["detail_level"] = view.DetailLevel.ToString();
+                    viewports.TryGetValue(view.Id.IntegerValue, out int? sheetId);
+                    item["associated_sheet_id"] = sheetId;
+                    item["doc_id"] = doc.PathName;
+                    result.Add(item);
 
-                if (db != null)
                     db.UpsertView(openConn, view.Id.IntegerValue, Guid.Empty, view.Name, view.ViewType.ToString(), view.Scale, discipline, view.DetailLevel.ToString(), sheetId, doc.PathName, lastSaved, tx);
-            }
+                }
 
-            if (db != null)
-            {
                 db.UpsertModelInfo(openConn, doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved, null, null, tx);
                 tx.Commit();
-                openConn.Close();
+            }
+            else
+            {
+                foreach (var view in views)
+                {
+                    var item = new Dictionary<string, object>();
+                    item["id"] = view.Id.IntegerValue;
+                    item["guid"] = view.UniqueId;
+                    item["name"] = view.Name;
+                    item["view_type"] = view.ViewType.ToString();
+                    item["scale"] = view.Scale;
+                    string discipline = "Unknown";
+                    item["discipline"] = discipline;
+                    item["detail_level"] = view.DetailLevel.ToString();
+                    viewports.TryGetValue(view.Id.IntegerValue, out int? sheetId);
+                    item["associated_sheet_id"] = sheetId;
+                    item["doc_id"] = doc.PathName;
+                    result.Add(item);
+                }
             }
 
             ModelCache.Set(doc.PathName + "/views", lastSaved, result);

@@ -45,9 +45,9 @@ public class SyncModelToSqlCommand : ICommand
 
         // Proceed as usual if the test passed
         var db = new PostgresDb(conn);
-        NpgsqlConnection openConn = new NpgsqlConnection(conn);
+        using var openConn = new NpgsqlConnection(conn);
         openConn.Open();
-        var tx = openConn.BeginTransaction();
+        using var tx = openConn.BeginTransaction();
         DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
         if (db.GetModelLastSaved(doc.PathName) == lastSaved)
         {
@@ -142,7 +142,6 @@ public class SyncModelToSqlCommand : ICommand
         response["guid"] = ParseGuid(doc.ProjectInformation.UniqueId).ToString();
         response["last_saved"] = lastSaved.ToString("yyyy-MM-ddTHH:mm:ss");
         tx.Commit();
-        openConn.Close();
         return response;
     }
 
