@@ -18,8 +18,9 @@ namespace RevitExtractor
             string modelPath = args[0];
             string conn = args[1];
 
-            // Start Revit in automation mode
-            Application app = new Application();
+            // Start Revit in automation mode. Requires Revit to be installed locally.
+            ControlledApplication ctrlApp = new ControlledApplication();
+            Application app = ctrlApp.Create.NewApplication();
             ModelPath mp = ModelPathUtils.ConvertUserVisiblePathToModelPath(modelPath);
             OpenOptions opts = new OpenOptions();
             Document doc = app.OpenDocumentFile(mp, opts);
@@ -66,6 +67,7 @@ namespace RevitExtractor
 
             doc.Close(false);
             app.Dispose();
+            ctrlApp.Dispose();
             return 0;
         }
 
