@@ -49,6 +49,14 @@ public class ListFamiliesAndTypesCommand : ICommand
                 }
             }
 
+            string cacheKey = doc.PathName + "/families-" + filterType.Name;
+            if (ModelCache.TryGet(cacheKey, lastSaved, out List<Dictionary<string, object>> cached))
+            {
+                response["status"] = "success";
+                response["types"] = cached;
+                return response;
+            }
+
             var types = new FilteredElementCollector(doc)
                 .WhereElementIsElementType()
                 .OfClass(filterType)
@@ -77,6 +85,7 @@ public class ListFamiliesAndTypesCommand : ICommand
             if (db != null)
                 db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved);
 
+            ModelCache.Set(cacheKey, lastSaved, result);
             response["status"] = "success";
             response["types"] = result;
         }
