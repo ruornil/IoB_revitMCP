@@ -313,6 +313,18 @@ Example `App.config` snippet:
 
 ---
 
+## 🚀 Standalone Extractor
+
+A lightweight console application `RevitExtractor` is included for batch exporting model data without running the MCP HTTP server. Build the project in `RevitExtractor/RevitExtractor.csproj` and run it with:
+
+```bash
+RevitExtractor.exe "path/to/model.rvt" "Host=localhost;Database=revit;Username=user;Password=pass"
+```
+
+The tool opens the specified model in Revit automation mode and writes elements, element types and their parameters to PostgreSQL using the same schema as the add‑in.
+
+---
+
 ## 🛠 Development Notes
 
 * ✅ C# 7.3 compatibility enforced.
