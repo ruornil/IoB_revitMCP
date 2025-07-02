@@ -20,6 +20,14 @@ public class ListElementsCommand : ICommand
 
         DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
 
+        if (ModelCache.TryGet(doc.PathName + "/elements-" + categoryName, lastSaved,
+                out List<Dictionary<string, object>> cached))
+        {
+            response["status"] = "success";
+            response["elements"] = cached;
+            return response;
+        }
+
         var collector = new FilteredElementCollector(doc)
             .OfCategory(CategoryUtils.ParseBuiltInCategory(categoryName))
             .WhereElementIsNotElementType();
@@ -54,6 +62,7 @@ public class ListElementsCommand : ICommand
         if (db != null)
             db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved);
 
+        ModelCache.Set(doc.PathName + "/elements-" + categoryName, lastSaved, elements);
         response["status"] = "success";
         response["elements"] = elements;
         return response;
