@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Text.Json;
+using Newtonsoft.Json;
 
 public class SyncModelToSqlCommand : ICommand
 {
@@ -39,6 +40,25 @@ public class SyncModelToSqlCommand : ICommand
             System.IO.File.WriteAllText("C:\\Temp\\pg-debug.txt", ex.ToString());
             response["status"] = "error";
             response["message"] = "Connection test failed. See pg-debug.txt for details.";
+            return response;
+        }
+
+        // If async flag provided, enqueue a plan and return job id
+        if (input.TryGetValue("async", out var asyncVal) && asyncVal == "true")
+        {
+            var paramCopy = new Dictionary<string, string>(input);
+            paramCopy.Remove("action");
+            paramCopy.Remove("async");
+            var step = new Dictionary<string, object>
+            {
+                { "action", "SyncModelToSql" },
+                { "params", paramCopy }
+            };
+            string planJson = JsonConvert.SerializeObject(new[] { step });
+            var db = new PostgresDb(conn);
+            int jobId = db.EnqueuePlan(planJson);
+            response["status"] = "queued";
+            response["job_id"] = jobId;
             return response;
         }
 

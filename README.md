@@ -21,7 +21,7 @@ future.
 * **Vector Search Tools** – resolve category names or API concepts with `RevitBuiltinCategories` and `RevitApiVectorDB`.
 * **Plan Execution** – chain multiple commands in a single request.
 * **LLM Integration** – use the provided n8n workflow to translate chat messages into commands.
-* **Async Queue** – long-running plans can be queued via `EnqueuePlan` and executed in the background.
+* **Async Queue** – long-running plans can be queued via `EnqueuePlan` and executed in the background. Results are stored with a job status so n8n can poll for completion.
 * **In-memory Caching** – frequently used metadata like views and parameter bindings are cached per model session.
 
 ---
@@ -259,6 +259,16 @@ future.
 }
 ```
 
+Add `"async": "true"` to run the sync in the background. The response includes a `job_id` which can be looked up in `mcp_queue`.
+
+```json
+{
+  "action": "SyncModelToSql",
+  "async": "true",
+  "conn_file": "revit-conn.txt"
+}
+```
+
 ### 🔹 Run an Arbitrary SQL Query
 
 ```json
@@ -271,7 +281,7 @@ future.
 
 ### 🔹 Queue a Plan for Async Execution
 
-Queued plans run in the background and results are stored in the `mcp_queue` table.
+Queued plans run in the background and results are stored in the `mcp_queue` table. Poll the `status` field (e.g. via `QuerySql`) until it becomes `done` to retrieve the `result` JSON.
 
 ```json
 {
