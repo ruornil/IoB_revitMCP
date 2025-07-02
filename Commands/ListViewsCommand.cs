@@ -3,6 +3,7 @@ using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Npgsql;
 
 public class ListViewsCommand : ICommand
 {
@@ -51,6 +52,15 @@ public class ListViewsCommand : ICommand
                 .Cast<View>()
                 .Where(v => !v.IsTemplate);
 
+            NpgsqlConnection openConn = null;
+            NpgsqlTransaction tx = null;
+            if (db != null)
+            {
+                openConn = new NpgsqlConnection(conn);
+                openConn.Open();
+                tx = openConn.BeginTransaction();
+            }
+
             foreach (var view in views)
             {
                 var item = new Dictionary<string, object>();
@@ -71,11 +81,15 @@ public class ListViewsCommand : ICommand
                 result.Add(item);
 
                 if (db != null)
-                    db.UpsertView(view.Id.IntegerValue, Guid.Empty, view.Name, view.ViewType.ToString(), view.Scale, discipline, view.DetailLevel.ToString(), sheetId, doc.PathName, lastSaved);
+                    db.UpsertView(openConn, view.Id.IntegerValue, Guid.Empty, view.Name, view.ViewType.ToString(), view.Scale, discipline, view.DetailLevel.ToString(), sheetId, doc.PathName, lastSaved, tx);
             }
 
             if (db != null)
-                db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved);
+            {
+                db.UpsertModelInfo(openConn, doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved, null, null, tx);
+                tx.Commit();
+                openConn.Close();
+            }
 
             ModelCache.Set(doc.PathName + "/views", lastSaved, result);
             response["status"] = "success";

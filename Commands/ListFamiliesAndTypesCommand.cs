@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Npgsql;
 
 public class ListFamiliesAndTypesCommand : ICommand
 {
@@ -54,6 +55,15 @@ public class ListFamiliesAndTypesCommand : ICommand
                 .OfClass(filterType)
                 .Cast<ElementType>();
 
+            NpgsqlConnection openConn = null;
+            NpgsqlTransaction tx = null;
+            if (db != null)
+            {
+                openConn = new NpgsqlConnection(conn);
+                openConn.Open();
+                tx = openConn.BeginTransaction();
+            }
+
             foreach (var type in types)
             {
                 if (type.FamilyName != null && type.Name != null)
@@ -69,13 +79,17 @@ public class ListFamiliesAndTypesCommand : ICommand
 
                     if (db != null)
                     {
-                        db.UpsertFamily(type.FamilyName, type.Name, type.Category?.Name ?? string.Empty, type.UniqueId, doc.PathName, lastSaved);
+                        db.UpsertFamily(openConn, type.FamilyName, type.Name, type.Category?.Name ?? string.Empty, type.UniqueId, doc.PathName, lastSaved, tx);
                     }
                 }
             }
 
             if (db != null)
-                db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved);
+            {
+                db.UpsertModelInfo(openConn, doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved, null, null, tx);
+                tx.Commit();
+                openConn.Close();
+            }
 
             response["status"] = "success";
             response["types"] = result;

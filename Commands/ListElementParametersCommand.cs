@@ -4,6 +4,7 @@ using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Npgsql;
 
 
 public class ListElementParametersCommand : ICommand
@@ -70,6 +71,14 @@ public class ListElementParametersCommand : ICommand
         var result = new Dictionary<string, object>();
         var paramNames = new HashSet<string>();
         DateTime now = DateTime.UtcNow;
+        Npgsql.NpgsqlConnection openConn = null;
+        Npgsql.NpgsqlTransaction tx = null;
+        if (db != null)
+        {
+            openConn = new Npgsql.NpgsqlConnection(conn);
+            openConn.Open();
+            tx = openConn.BeginTransaction();
+        }
         foreach (var id in ids)
         {
             var element = doc.GetElement(id);
@@ -92,15 +101,14 @@ public class ListElementParametersCommand : ICommand
 
             if (db != null)
             {
-                db.UpsertElement(
-                    element.Id.IntegerValue,
+                db.UpsertElement(openConn, element.Id.IntegerValue,
                     ParseGuid(element.UniqueId),
                     element.Name,
                     element.Category?.Name ?? string.Empty,
                     typeName,
                     levelName,
                     doc.PathName,
-                    lastSaved);
+                    lastSaved, tx);
             }
 
             var paramData = new Dictionary<string, object>();
@@ -143,8 +151,8 @@ public class ListElementParametersCommand : ICommand
 
                 if (db != null)
                 {
-                    db.UpsertParameter(element.Id.IntegerValue, name, valueStr, isType,
-                        cats?.ToArray(), lastSaved);
+                    db.UpsertParameter(openConn, element.Id.IntegerValue, name, valueStr, isType,
+                        cats?.ToArray(), lastSaved, tx);
                 }
             }
             result[id.IntegerValue.ToString()] = paramData;
@@ -154,7 +162,11 @@ public class ListElementParametersCommand : ICommand
         response["parameters"] = result;
         response["parameter_names"] = paramNames.ToList();
         if (db != null)
-            db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved);
+        {
+            db.UpsertModelInfo(openConn, doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved, null, null, tx);
+            tx.Commit();
+            openConn.Close();
+        }
         return response;
     }
 

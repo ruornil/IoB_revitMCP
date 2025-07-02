@@ -3,6 +3,7 @@ using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Npgsql;
 
 public class ListCategoriesCommand : ICommand
 {
@@ -36,6 +37,10 @@ public class ListCategoriesCommand : ICommand
                 return response;
             }
 
+            NpgsqlConnection openConn = new NpgsqlConnection(conn);
+            openConn.Open();
+            var tx = openConn.BeginTransaction();
+
             foreach (Category cat in doc.Settings.Categories)
             {
                 var item = new Dictionary<string, object>();
@@ -46,9 +51,11 @@ public class ListCategoriesCommand : ICommand
                 item["description"] = string.Empty;
                 categories.Add(item);
 
-                db.UpsertCategory(cat.Id.IntegerValue.ToString(), cat.Name, cat.CategoryType.ToString(), item["description"].ToString(), Guid.Empty, lastSaved);
+                db.UpsertCategory(openConn, cat.Id.IntegerValue.ToString(), cat.Name, cat.CategoryType.ToString(), item["description"].ToString(), Guid.Empty, lastSaved, tx);
             }
-            db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved);
+            db.UpsertModelInfo(openConn, doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved, null, null, tx);
+            tx.Commit();
+            openConn.Close();
             response["status"] = "success";
             response["categories"] = categories;
         }

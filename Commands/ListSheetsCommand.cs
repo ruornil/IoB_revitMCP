@@ -3,6 +3,7 @@ using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Npgsql;
 
 public class ListSheetsCommand : ICommand
 {
@@ -37,6 +38,9 @@ public class ListSheetsCommand : ICommand
             }
 
             var col = new FilteredElementCollector(doc).OfClass(typeof(ViewSheet)).Cast<ViewSheet>();
+            NpgsqlConnection openConn = new NpgsqlConnection(conn);
+            openConn.Open();
+            var tx = openConn.BeginTransaction();
             foreach (var sheet in col)
             {
                 var item = new Dictionary<string, object>();
@@ -50,9 +54,11 @@ public class ListSheetsCommand : ICommand
                 item["doc_id"] = doc.PathName;
                 sheets.Add(item);
 
-                db.UpsertSheet(sheet.Id.IntegerValue, Guid.Empty, sheet.Name, sheet.SheetNumber, item["title_block"].ToString(), doc.PathName, lastSaved);
+                db.UpsertSheet(openConn, sheet.Id.IntegerValue, Guid.Empty, sheet.Name, sheet.SheetNumber, item["title_block"].ToString(), doc.PathName, lastSaved, tx);
             }
-            db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved);
+            db.UpsertModelInfo(openConn, doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved, null, null, tx);
+            tx.Commit();
+            openConn.Close();
             response["status"] = "success";
             response["sheets"] = sheets;
         }

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Text.Json;
+using Npgsql;
 
 public class SyncModelToSqlCommand : ICommand
 {
@@ -44,6 +45,9 @@ public class SyncModelToSqlCommand : ICommand
 
         // Proceed as usual if the test passed
         var db = new PostgresDb(conn);
+        NpgsqlConnection openConn = new NpgsqlConnection(conn);
+        openConn.Open();
+        var tx = openConn.BeginTransaction();
         DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
         if (db.GetModelLastSaved(doc.PathName) == lastSaved)
         {
@@ -101,14 +105,14 @@ public class SyncModelToSqlCommand : ICommand
 
         string jsonInfo = JsonSerializer.Serialize(info);
         string jsonParams = JsonSerializer.Serialize(parameters);
-        db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved, jsonInfo, jsonParams);
+        db.UpsertModelInfo(openConn, doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved, jsonInfo, jsonParams, tx);
 
         // gather element types once and store in DB
         var typeCollector = new FilteredElementCollector(doc).WhereElementIsElementType();
         var typeMap = new Dictionary<ElementId, string>();
         foreach (ElementType type in typeCollector)
         {
-            db.UpsertElementType(type.Id.IntegerValue, ParseGuid(type.UniqueId), type.FamilyName, type.Name, type.Category?.Name ?? string.Empty, doc.PathName, lastSaved);
+            db.UpsertElementType(openConn, type.Id.IntegerValue, ParseGuid(type.UniqueId), type.FamilyName, type.Name, type.Category?.Name ?? string.Empty, doc.PathName, lastSaved, tx);
             if (!typeMap.ContainsKey(type.Id))
                 typeMap[type.Id] = type.Name;
         }
@@ -127,7 +131,7 @@ public class SyncModelToSqlCommand : ICommand
                 var lvl = doc.GetElement(element.LevelId);
                 if (lvl != null) levelName = lvl.Name;
             }
-            db.UpsertElement(element.Id.IntegerValue, ParseGuid(element.UniqueId), element.Name, element.Category?.Name ?? string.Empty, typeName, levelName, doc.PathName, lastSaved);
+            db.UpsertElement(openConn, element.Id.IntegerValue, ParseGuid(element.UniqueId), element.Name, element.Category?.Name ?? string.Empty, typeName, levelName, doc.PathName, lastSaved, tx);
             count++;
         }
         response["status"] = "success";
@@ -137,6 +141,8 @@ public class SyncModelToSqlCommand : ICommand
         response["project_parameters"] = parameters;
         response["guid"] = ParseGuid(doc.ProjectInformation.UniqueId).ToString();
         response["last_saved"] = lastSaved.ToString("yyyy-MM-ddTHH:mm:ss");
+        tx.Commit();
+        openConn.Close();
         return response;
     }
 

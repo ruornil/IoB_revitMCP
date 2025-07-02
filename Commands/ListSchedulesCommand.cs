@@ -3,6 +3,7 @@ using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Npgsql;
 
 public class ListSchedulesCommand : ICommand
 {
@@ -37,6 +38,9 @@ public class ListSchedulesCommand : ICommand
             }
 
             var col = new FilteredElementCollector(doc).OfClass(typeof(ViewSchedule)).Cast<ViewSchedule>();
+            NpgsqlConnection openConn = new NpgsqlConnection(conn);
+            openConn.Open();
+            var tx = openConn.BeginTransaction();
             foreach (var sch in col)
             {
                 var item = new Dictionary<string, object>();
@@ -47,9 +51,11 @@ public class ListSchedulesCommand : ICommand
                 item["doc_id"] = doc.PathName;
                 scheds.Add(item);
 
-                db.UpsertSchedule(sch.Id.IntegerValue, Guid.Empty, sch.Name, item["category"].ToString(), doc.PathName, lastSaved);
+                db.UpsertSchedule(openConn, sch.Id.IntegerValue, Guid.Empty, sch.Name, item["category"].ToString(), doc.PathName, lastSaved, tx);
             }
-            db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved);
+            db.UpsertModelInfo(openConn, doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved, null, null, tx);
+            tx.Commit();
+            openConn.Close();
             response["status"] = "success";
             response["schedules"] = scheds;
         }

@@ -4,6 +4,7 @@ using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Npgsql;
 
 public class ListElementsCommand : ICommand
 {
@@ -25,6 +26,15 @@ public class ListElementsCommand : ICommand
             .WhereElementIsNotElementType();
 
         var elements = new List<Dictionary<string, object>>();
+        NpgsqlConnection openConn = null;
+        NpgsqlTransaction tx = null;
+        if (db != null)
+        {
+            openConn = new NpgsqlConnection(conn);
+            openConn.Open();
+            tx = openConn.BeginTransaction();
+        }
+
         foreach (var e in collector)
         {
             var item = new Dictionary<string, object>();
@@ -46,13 +56,17 @@ public class ListElementsCommand : ICommand
                     if (lvl != null) levelName = lvl.Name;
                 }
 
-                db.UpsertElement(e.Id.IntegerValue, ParseGuid(e.UniqueId), e.Name,
-                    e.Category?.Name ?? string.Empty, typeName, levelName, doc.PathName, lastSaved);
+                db.UpsertElement(openConn, e.Id.IntegerValue, ParseGuid(e.UniqueId), e.Name,
+                    e.Category?.Name ?? string.Empty, typeName, levelName, doc.PathName, lastSaved, tx);
             }
         }
 
         if (db != null)
-            db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved);
+        {
+            db.UpsertModelInfo(openConn, doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved, null, null, tx);
+            tx.Commit();
+            openConn.Close();
+        }
 
         response["status"] = "success";
         response["elements"] = elements;
