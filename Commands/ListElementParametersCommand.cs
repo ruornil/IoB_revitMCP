@@ -69,6 +69,11 @@ public class ListElementParametersCommand : ICommand
 
         var result = new Dictionary<string, object>();
         var paramNames = new HashSet<string>();
+        HashSet<string> filterNames = null;
+        if (input.TryGetValue("param_names", out var namesStr) && !string.IsNullOrWhiteSpace(namesStr))
+        {
+            filterNames = new HashSet<string>(namesStr.Split(',').Select(s => s.Trim()), StringComparer.OrdinalIgnoreCase);
+        }
         DateTime now = DateTime.UtcNow;
         foreach (var id in ids)
         {
@@ -109,6 +114,7 @@ public class ListElementParametersCommand : ICommand
                 if (param == null) continue;
                 string name = param.Definition?.Name;
                 if (string.IsNullOrEmpty(name)) continue;
+                if (filterNames != null && !filterNames.Contains(name)) continue;
                 paramNames.Add(name);
                 string storage = param.StorageType.ToString();
                 object value = null;
