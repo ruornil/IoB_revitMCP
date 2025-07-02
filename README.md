@@ -77,7 +77,7 @@ future.
 | **ExportToJson**           | `action` with optional `categories` list (defaults to Walls)\               | –                                                                         | `elements` (instance and type in their respective tables) array with id, name, category and parameter values\                             |
 | **FilterByParameter**      | `action`, `param`, `value`, `input_elements` (JSON list)\                   | –                                                                         | `elements` list containing `{ Id, Name }` of matching elements\                                                                           |
 | **ListCategories**         | `action` plus a PostgreSQL connection string (via config/env/`conn_file`)\  | –                                                                         | `categories` list describing each Revit category\                                                                                         |
-| **ListElementParameters**  | `action` plus `element_ids` (comma list) or selected elements\              | connection string options via `conn_file` etc.                            | `parameters` keyed by element id and `parameter_names` list\                                                                              |
+| **ListElementParameters**  | `action` plus `element_ids` (comma list) or selected elements\              | `param_names` comma list, connection string options via `conn_file` etc.                            | `parameters` keyed by element id and `parameter_names` list\                                                                              |
 | **ListElementsByCategory** | `action` (name `ListElementsByCategory`), `category` (defaults to Walls)\   | –                                                                         | `elements` list with id and name\                                                                                                         |
 | **ListFamiliesAndTypes**   | `action` (`GetFamilyAndTypes`)                                              | `class_name` to filter, optional database connection                      | Returns `types` list with family, type, id, category, guid, doc_id,info\                                                                  |
 | **ListSchedules**          | `action` and DB connection string\                                          | –                                                                         | `schedules` list with id, name and category\                                                                                              |
@@ -97,7 +97,8 @@ future.
 ```json
 {
   "action": "ListElementParameters",
-  "element_ids": "123456,789012"
+  "element_ids": "123456,789012",
+  "param_names": "Mark,Comments"
 }
 ```
 

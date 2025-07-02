@@ -350,6 +350,7 @@ Retrieve parameters for specified elements or the current selection.
 **Inputs**:
 
 - `element_ids` (optional, string): comma-separated list of element IDs. If omitted, uses the current selection.
+- `param_names` (optional, string): comma-separated list of parameter names to include.
 
 **Expected Output**:
 
@@ -359,7 +360,7 @@ Retrieve parameters for specified elements or the current selection.
 **Usage Example**:
 
 ```json
-{ "action": "ListElementParameters", "element_ids": "123,456" }
+{ "action": "ListElementParameters", "element_ids": "123,456", "param_names": "Mark,Comments" }
 ```
 
 **Typical Use Case for AI Agent**:

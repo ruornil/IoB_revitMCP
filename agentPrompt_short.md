@@ -105,7 +105,7 @@ Use to send the structured commands defined below.
 | `FilterByParameter`      | Filter element list by a parameter's value. |
 | `ListCategories`         | List all Revit categories. |
 | `ListElementsByCategory` | List all elements of a specified category. |
-| `ListElementParameters`  | Retrieve parameters for specified elements. |
+| `ListElementParameters`  | Retrieve parameters for specified elements (optional `param_names`). |
 | `ListFamiliesAndTypes`   | Retrieve all families and their types in the model. |
 | `ListModelContext`       | Return active model name, path, and project info. |
 | `ListSheets`             | List all Revit sheets. |
@@ -133,7 +133,7 @@ Use to send the structured commands defined below.
 
 ```json
 { "action": "ListElementParameters" }
-{ "action": "ListElementParameters", "element_ids": "123,456" }
+{ "action": "ListElementParameters", "element_ids": "123,456", "param_names": "Mark,Comments" }
 ```
 
 **ModifyElements** – update parameter values.

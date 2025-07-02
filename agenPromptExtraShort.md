@@ -71,7 +71,7 @@ Executes commands in Revit.
 | `ExportToJson`           | Export selected categories to JSON. |
 | `FilterByParameter`      | Filter element list by a parameter's value. |
 | `ListCategories`         | List all Revit categories. |
-| `ListElementParameters`  | Retrieve parameters for specified elements. |
+| `ListElementParameters`  | Retrieve parameters for specified elements (optional `param_names`). |
 | `ListElementsByCategory` | List all elements of a specified category. |
 | `ListFamiliesAndTypes`   | Retrieve all families and their types in the model. |
 | `ListModelContext`       | Return active model name, path, and project info. |
@@ -91,7 +91,7 @@ Executes commands in Revit.
 { "action": "ListElementsByCategory", "category": "Walls" }
 { "action": "FilterByParameter", "param": "FireRating", "value": "120", "input_elements": [...] }
 { "action": "ListElementParameters" }
-{ "action": "ListElementParameters", "element_ids": "123,456" }
+{ "action": "ListElementParameters", "element_ids": "123,456", "param_names": "Mark,Comments" }
 { "action": "ModifyElements", "changes": [ { "element_id": 123, "parameters": { "Mark": "Wall-A" } } ] }
 { "action": "NewSharedParameter", "parameter_name": "...", "categories": "Walls" }
 { "action": "ModifyElements", "changes": [ { "element_id": 200, "new_type_name": "New Type" } ] }
