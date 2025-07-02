@@ -45,7 +45,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Program.cs" />
+    <Compile Include="ExportModelToPostgresCommand.cs" />
     <Compile Include="..\Data\PostgresDb.cs" Link="PostgresDb.cs" />
   </ItemGroup>
   <ItemGroup>
