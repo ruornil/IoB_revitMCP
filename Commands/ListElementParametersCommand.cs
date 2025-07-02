@@ -4,6 +4,7 @@ using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Npgsql;
 
 
 public class ListElementParametersCommand : ICommand
@@ -22,8 +23,15 @@ public class ListElementParametersCommand : ICommand
         }
         string conn = DbConfigHelper.GetConnectionString(input);
         PostgresDb db = null;
+        NpgsqlConnection sharedConn = null;
+        NpgsqlTransaction tx = null;
         if (!string.IsNullOrEmpty(conn))
+        {
             db = new PostgresDb(conn);
+            sharedConn = new NpgsqlConnection(conn);
+            sharedConn.Open();
+            tx = sharedConn.BeginTransaction();
+        }
 
         // Precompute project parameter categories from ParameterBindings
         DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
@@ -105,7 +113,9 @@ public class ListElementParametersCommand : ICommand
                     typeName,
                     levelName,
                     doc.PathName,
-                    lastSaved);
+                    lastSaved,
+                    sharedConn,
+                    tx);
             }
 
             var paramData = new Dictionary<string, object>();
@@ -150,7 +160,8 @@ public class ListElementParametersCommand : ICommand
                 if (db != null)
                 {
                     db.UpsertParameter(element.Id.IntegerValue, name, valueStr, isType,
-                        cats?.ToArray(), lastSaved);
+                        cats?.ToArray(), lastSaved,
+                        sharedConn, tx);
                 }
             }
             result[id.IntegerValue.ToString()] = paramData;
@@ -160,7 +171,12 @@ public class ListElementParametersCommand : ICommand
         response["parameters"] = result;
         response["parameter_names"] = paramNames.ToList();
         if (db != null)
-            db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved);
+        {
+            db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved,
+                null, null, sharedConn, tx);
+            tx.Commit();
+            sharedConn.Close();
+        }
         return response;
     }
 

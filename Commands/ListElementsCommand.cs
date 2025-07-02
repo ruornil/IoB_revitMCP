@@ -4,6 +4,7 @@ using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Npgsql;
 
 public class ListElementsCommand : ICommand
 {
@@ -15,8 +16,15 @@ public class ListElementsCommand : ICommand
 
         string conn = DbConfigHelper.GetConnectionString(input);
         PostgresDb db = null;
+        NpgsqlConnection sharedConn = null;
+        NpgsqlTransaction tx = null;
         if (!string.IsNullOrEmpty(conn))
+        {
             db = new PostgresDb(conn);
+            sharedConn = new NpgsqlConnection(conn);
+            sharedConn.Open();
+            tx = sharedConn.BeginTransaction();
+        }
 
         DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
 
@@ -55,12 +63,18 @@ public class ListElementsCommand : ICommand
                 }
 
                 db.UpsertElement(e.Id.IntegerValue, ParseGuid(e.UniqueId), e.Name,
-                    e.Category?.Name ?? string.Empty, typeName, levelName, doc.PathName, lastSaved);
+                    e.Category?.Name ?? string.Empty, typeName, levelName, doc.PathName, lastSaved,
+                    sharedConn, tx);
             }
         }
 
         if (db != null)
-            db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved);
+        {
+            db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved,
+                null, null, sharedConn, tx);
+            tx.Commit();
+            sharedConn.Close();
+        }
 
         ModelCache.Set(doc.PathName + "/elements-" + categoryName, lastSaved, elements);
         response["status"] = "success";

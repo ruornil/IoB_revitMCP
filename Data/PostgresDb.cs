@@ -20,11 +20,18 @@ public class PostgresDb
     public int ExecuteNonQuery(string sql, params NpgsqlParameter[] args)
     {
         using (var conn = new NpgsqlConnection(_connectionString))
-        using (var cmd = new NpgsqlCommand(sql, conn))
+        {
+            conn.Open();
+            return ExecuteNonQuery(conn, null, sql, args);
+        }
+    }
+
+    public int ExecuteNonQuery(NpgsqlConnection conn, NpgsqlTransaction tx, string sql, params NpgsqlParameter[] args)
+    {
+        using (var cmd = new NpgsqlCommand(sql, conn, tx))
         {
             if (args != null)
                 cmd.Parameters.AddRange(args);
-            conn.Open();
             return cmd.ExecuteNonQuery();
         }
     }
@@ -55,7 +62,8 @@ public class PostgresDb
     }
 
     public void UpsertElement(int id, Guid guid, string name, string category,
-        string typeName, string level, string docId, DateTime lastSaved)
+        string typeName, string level, string docId, DateTime lastSaved,
+        NpgsqlConnection conn = null, NpgsqlTransaction tx = null)
     {
         string sql = @"INSERT INTO revit_elements
             (id, guid, name, category, type_name, level, doc_id, last_saved)
@@ -70,7 +78,7 @@ public class PostgresDb
                 last_saved = EXCLUDED.last_saved
             WHERE EXCLUDED.last_saved > revit_elements.last_saved";
 
-        ExecuteNonQuery(sql,
+        var args = new[] {
             new NpgsqlParameter("@id", id),
             new NpgsqlParameter("@guid", guid),
             new NpgsqlParameter("@name", name ?? (object)DBNull.Value),
@@ -78,11 +86,18 @@ public class PostgresDb
             new NpgsqlParameter("@type_name", typeName ?? (object)DBNull.Value),
             new NpgsqlParameter("@level", level ?? (object)DBNull.Value),
             new NpgsqlParameter("@doc_id", docId ?? (object)DBNull.Value),
-            new NpgsqlParameter("@last_saved", lastSaved));
+            new NpgsqlParameter("@last_saved", lastSaved)
+        };
+
+        if (conn == null)
+            ExecuteNonQuery(sql, args);
+        else
+            ExecuteNonQuery(conn, tx, sql, args);
     }
 
     public void UpsertParameter(int elementId, string name, string value, bool isType,
-        string[] applicable, DateTime lastSaved)
+        string[] applicable, DateTime lastSaved,
+        NpgsqlConnection conn = null, NpgsqlTransaction tx = null)
     {
         string sql = @"INSERT INTO revit_parameters
             (element_id, param_name, param_value, is_type, applicable_categories, last_saved)
@@ -94,16 +109,23 @@ public class PostgresDb
                 last_saved = EXCLUDED.last_saved
             WHERE EXCLUDED.last_saved > revit_parameters.last_saved";
 
-        ExecuteNonQuery(sql,
+        var args = new[] {
             new NpgsqlParameter("@elid", elementId),
             new NpgsqlParameter("@name", name),
             new NpgsqlParameter("@value", value ?? (object)DBNull.Value),
             new NpgsqlParameter("@is_type", isType),
             new NpgsqlParameter("@categories", applicable ?? (object)DBNull.Value),
-            new NpgsqlParameter("@last_saved", lastSaved));
+            new NpgsqlParameter("@last_saved", lastSaved)
+        };
+
+        if (conn == null)
+            ExecuteNonQuery(sql, args);
+        else
+            ExecuteNonQuery(conn, tx, sql, args);
     }
 
-    public void UpsertCategory(string enumVal, string name, string group, string description, Guid guid, DateTime lastSaved)
+    public void UpsertCategory(string enumVal, string name, string group, string description, Guid guid, DateTime lastSaved,
+        NpgsqlConnection conn = null, NpgsqlTransaction tx = null)
     {
         string sql = @"INSERT INTO revit_categories
             (enum, name, category_group, description, guid, last_saved)
@@ -116,17 +138,24 @@ public class PostgresDb
                 last_saved = EXCLUDED.last_saved
             WHERE EXCLUDED.last_saved > revit_categories.last_saved";
 
-        ExecuteNonQuery(sql,
+        var args = new[] {
             new NpgsqlParameter("@enum", enumVal),
             new NpgsqlParameter("@name", name ?? (object)DBNull.Value),
             new NpgsqlParameter("@group", group ?? (object)DBNull.Value),
             new NpgsqlParameter("@description", description ?? (object)DBNull.Value),
             new NpgsqlParameter("@guid", guid),
-            new NpgsqlParameter("@last_saved", lastSaved));
+            new NpgsqlParameter("@last_saved", lastSaved)
+        };
+
+        if (conn == null)
+            ExecuteNonQuery(sql, args);
+        else
+            ExecuteNonQuery(conn, tx, sql, args);
     }
 
     public void UpsertView(int id, Guid guid, string name, string viewType, int scale,
-        string discipline, string detail, int? sheetId, string docId, DateTime lastSaved)
+        string discipline, string detail, int? sheetId, string docId, DateTime lastSaved,
+        NpgsqlConnection conn = null, NpgsqlTransaction tx = null)
     {
         string sql = @"INSERT INTO revit_views
             (id, guid, name, view_type, scale, discipline, detail_level, associated_sheet_id, doc_id, last_saved)
@@ -143,7 +172,7 @@ public class PostgresDb
                 last_saved = EXCLUDED.last_saved
             WHERE EXCLUDED.last_saved > revit_views.last_saved";
 
-        ExecuteNonQuery(sql,
+        var args = new[] {
             new NpgsqlParameter("@id", id),
             new NpgsqlParameter("@guid", guid),
             new NpgsqlParameter("@name", name ?? (object)DBNull.Value),
@@ -153,10 +182,17 @@ public class PostgresDb
             new NpgsqlParameter("@detail", detail ?? (object)DBNull.Value),
             new NpgsqlParameter("@sheet", sheetId ?? (object)DBNull.Value),
             new NpgsqlParameter("@doc", docId ?? (object)DBNull.Value),
-            new NpgsqlParameter("@last_saved", lastSaved));
+            new NpgsqlParameter("@last_saved", lastSaved)
+        };
+
+        if (conn == null)
+            ExecuteNonQuery(sql, args);
+        else
+            ExecuteNonQuery(conn, tx, sql, args);
     }
 
-    public void UpsertSheet(int id, Guid guid, string name, string number, string titleBlock, string docId, DateTime lastSaved)
+    public void UpsertSheet(int id, Guid guid, string name, string number, string titleBlock, string docId, DateTime lastSaved,
+        NpgsqlConnection conn = null, NpgsqlTransaction tx = null)
     {
         string sql = @"INSERT INTO revit_sheets
             (id, guid, name, number, title_block, doc_id, last_saved)
@@ -170,17 +206,24 @@ public class PostgresDb
                 last_saved = EXCLUDED.last_saved
             WHERE EXCLUDED.last_saved > revit_sheets.last_saved";
 
-        ExecuteNonQuery(sql,
+        var args = new[] {
             new NpgsqlParameter("@id", id),
             new NpgsqlParameter("@guid", guid),
             new NpgsqlParameter("@name", name ?? (object)DBNull.Value),
             new NpgsqlParameter("@num", number ?? (object)DBNull.Value),
             new NpgsqlParameter("@tb", titleBlock ?? (object)DBNull.Value),
             new NpgsqlParameter("@doc", docId ?? (object)DBNull.Value),
-            new NpgsqlParameter("@last_saved", lastSaved));
+            new NpgsqlParameter("@last_saved", lastSaved)
+        };
+
+        if (conn == null)
+            ExecuteNonQuery(sql, args);
+        else
+            ExecuteNonQuery(conn, tx, sql, args);
     }
 
-    public void UpsertSchedule(int id, Guid guid, string name, string category, string docId, DateTime lastSaved)
+    public void UpsertSchedule(int id, Guid guid, string name, string category, string docId, DateTime lastSaved,
+        NpgsqlConnection conn = null, NpgsqlTransaction tx = null)
     {
         string sql = @"INSERT INTO revit_schedules
             (id, guid, name, category, doc_id, last_saved)
@@ -193,16 +236,23 @@ public class PostgresDb
                 last_saved = EXCLUDED.last_saved
             WHERE EXCLUDED.last_saved > revit_schedules.last_saved";
 
-        ExecuteNonQuery(sql,
+        var args = new[] {
             new NpgsqlParameter("@id", id),
             new NpgsqlParameter("@guid", guid),
             new NpgsqlParameter("@name", name ?? (object)DBNull.Value),
             new NpgsqlParameter("@cat", category ?? (object)DBNull.Value),
             new NpgsqlParameter("@doc", docId ?? (object)DBNull.Value),
-            new NpgsqlParameter("@last_saved", lastSaved));
+            new NpgsqlParameter("@last_saved", lastSaved)
+        };
+
+        if (conn == null)
+            ExecuteNonQuery(sql, args);
+        else
+            ExecuteNonQuery(conn, tx, sql, args);
     }
 
-    public void UpsertFamily(string name, string familyType, string category, string guid, string docId, DateTime lastSaved)
+    public void UpsertFamily(string name, string familyType, string category, string guid, string docId, DateTime lastSaved,
+        NpgsqlConnection conn = null, NpgsqlTransaction tx = null)
     {
         string sql = @"INSERT INTO revit_families
             (name, family_type, category, guid, doc_id, last_saved)
@@ -213,17 +263,24 @@ public class PostgresDb
                 last_saved = EXCLUDED.last_saved
             WHERE EXCLUDED.last_saved > revit_families.last_saved";
 
-        ExecuteNonQuery(sql,
+        var args = new[] {
             new NpgsqlParameter("@name", name ?? (object)DBNull.Value),
             new NpgsqlParameter("@type", familyType ?? (object)DBNull.Value),
             new NpgsqlParameter("@cat", category ?? (object)DBNull.Value),
             new NpgsqlParameter("@guid", guid ?? (object)DBNull.Value),
             new NpgsqlParameter("@doc", docId ?? (object)DBNull.Value),
-            new NpgsqlParameter("@last_saved", lastSaved));
+            new NpgsqlParameter("@last_saved", lastSaved)
+        };
+
+        if (conn == null)
+            ExecuteNonQuery(sql, args);
+        else
+            ExecuteNonQuery(conn, tx, sql, args);
     }
 
     public void UpsertElementType(int id, Guid guid, string family, string typeName,
-        string category, string docId, DateTime lastSaved)
+        string category, string docId, DateTime lastSaved,
+        NpgsqlConnection conn = null, NpgsqlTransaction tx = null)
     {
         string sql = @"INSERT INTO revit_elementTypes
             (id, guid, family, type_name, category, doc_id, last_saved)
@@ -237,17 +294,24 @@ public class PostgresDb
                 last_saved = EXCLUDED.last_saved
             WHERE EXCLUDED.last_saved > revit_elementTypes.last_saved";
 
-        ExecuteNonQuery(sql,
+        var args = new[] {
             new NpgsqlParameter("@id", id),
             new NpgsqlParameter("@guid", guid),
             new NpgsqlParameter("@family", family ?? (object)DBNull.Value),
             new NpgsqlParameter("@type_name", typeName ?? (object)DBNull.Value),
             new NpgsqlParameter("@category", category ?? (object)DBNull.Value),
             new NpgsqlParameter("@doc_id", docId ?? (object)DBNull.Value),
-            new NpgsqlParameter("@last_saved", lastSaved));
+            new NpgsqlParameter("@last_saved", lastSaved)
+        };
+
+        if (conn == null)
+            ExecuteNonQuery(sql, args);
+        else
+            ExecuteNonQuery(conn, tx, sql, args);
     }
 
-    public void UpsertModelInfo(string docId, string modelName, Guid guid, DateTime lastSaved, string projectInfo = null, string projectParameters = null)
+    public void UpsertModelInfo(string docId, string modelName, Guid guid, DateTime lastSaved, string projectInfo = null, string projectParameters = null,
+        NpgsqlConnection conn = null, NpgsqlTransaction tx = null)
     {
         string sql = @"INSERT INTO model_info
             (doc_id, model_name, guid, last_saved, project_info, project_parameters)
@@ -269,13 +333,20 @@ public class PostgresDb
             NpgsqlDbType = NpgsqlDbType.Jsonb
         };
 
-        ExecuteNonQuery(sql,
+        var args = new List<NpgsqlParameter>
+        {
             new NpgsqlParameter("@doc", docId ?? (object)DBNull.Value),
             new NpgsqlParameter("@name", modelName ?? (object)DBNull.Value),
             new NpgsqlParameter("@guid", guid),
             new NpgsqlParameter("@last_saved", lastSaved),
             infoParam,
-            paramsParam);
+            paramsParam
+        };
+
+        if (conn == null)
+            ExecuteNonQuery(sql, args.ToArray());
+        else
+            ExecuteNonQuery(conn, tx, sql, args.ToArray());
     }
 
     public DateTime? GetModelLastSaved(string docId)
