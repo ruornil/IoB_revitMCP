@@ -3,6 +3,7 @@ using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Npgsql;
 
 public class ListSheetsCommand : ICommand
 {
@@ -29,6 +30,9 @@ public class ListSheetsCommand : ICommand
             }
 
             PostgresDb db = new PostgresDb(conn);
+            NpgsqlConnection sharedConn = new NpgsqlConnection(conn);
+            sharedConn.Open();
+            var tx = sharedConn.BeginTransaction();
             DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
             if (db.GetModelLastSaved(doc.PathName) == lastSaved)
             {
@@ -50,9 +54,13 @@ public class ListSheetsCommand : ICommand
                 item["doc_id"] = doc.PathName;
                 sheets.Add(item);
 
-                db.UpsertSheet(sheet.Id.IntegerValue, Guid.Empty, sheet.Name, sheet.SheetNumber, item["title_block"].ToString(), doc.PathName, lastSaved);
+                db.UpsertSheet(sheet.Id.IntegerValue, Guid.Empty, sheet.Name, sheet.SheetNumber, item["title_block"].ToString(), doc.PathName, lastSaved,
+                    sharedConn, tx);
             }
-            db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved);
+            db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved,
+                null, null, sharedConn, tx);
+            tx.Commit();
+            sharedConn.Close();
             response["status"] = "success";
             response["sheets"] = sheets;
         }
