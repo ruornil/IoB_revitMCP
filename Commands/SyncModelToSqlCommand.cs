@@ -3,7 +3,7 @@ using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Text.Json;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 using Newtonsoft.Json;
 using Npgsql;
 
@@ -44,6 +44,8 @@ public class SyncModelToSqlCommand : ICommand
             return response;
         }
 
+        var db = new PostgresDb(conn);
+
         // If async flag provided, enqueue a plan and return job id
         if (input.TryGetValue("async", out var asyncVal) && asyncVal == "true")
         {
@@ -56,7 +58,6 @@ public class SyncModelToSqlCommand : ICommand
                 { "params", paramCopy }
             };
             string planJson = JsonConvert.SerializeObject(new[] { step });
-            var db = new PostgresDb(conn);
             int jobId = db.EnqueuePlan(planJson);
             response["status"] = "queued";
             response["job_id"] = jobId;
@@ -64,7 +65,6 @@ public class SyncModelToSqlCommand : ICommand
         }
 
         // Proceed as usual if the test passed
-        var db = new PostgresDb(conn);
         var sharedConn = new NpgsqlConnection(conn);
         sharedConn.Open();
         var tx = sharedConn.BeginTransaction();
