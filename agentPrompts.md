@@ -64,6 +64,90 @@ This document defines the usage format for each command in the MCP plugin, enabl
 
 ---
 
+### Command: QuerySql
+
+**Purpose**:
+
+**Inputs**:
+
+**Expected Output**:
+
+**Usage Example**:
+
+**Typical Use Case for AI Agent**:
+
+### Command: SyncModelToSql
+
+**Purpose**:
+
+**Inputs**:
+
+**Expected Output**:
+
+**Usage Example**:
+
+**Typical Use Case for AI Agent**:
+
+### Command: ListCategories
+
+**Purpose**:
+
+**Inputs**:
+
+**Expected Output**:
+
+**Usage Example**:
+
+**Typical Use Case for AI Agent**:
+
+### Command: ListSchedules
+
+**Purpose**:
+
+**Inputs**:
+
+**Expected Output**:
+
+**Usage Example**:
+
+**Typical Use Case for AI Agent**:
+
+### Command: ListSheets
+
+**Purpose**:
+
+**Inputs**:
+
+**Expected Output**:
+
+**Usage Example**:
+
+**Typical Use Case for AI Agent**:
+
+### Command: ListViews
+
+**Purpose**:
+
+**Inputs**:
+
+**Expected Output**:
+
+**Usage Example**:
+
+**Typical Use Case for AI Agent**:
+
+### Command: ExportToJson
+
+**Purpose**:
+
+**Inputs**:
+
+**Expected Output**:
+
+**Usage Example**:
+
+**Typical Use Case for AI Agent**:
+
 ### Command: ExecutePlan
 
 **Purpose**:
