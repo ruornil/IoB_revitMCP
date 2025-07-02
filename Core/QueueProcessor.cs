@@ -6,7 +6,9 @@ using Autodesk.Revit.UI;
 using Newtonsoft.Json;
 
 /// <summary>
-/// Background worker that executes queued plans from the mcp_queue table.
+/// Background worker that executes queued plans from the <c>mcp_queue</c> table.
+/// Jobs are marked with a status and JSON result so external tools like n8n can
+/// poll the table for completion.
 /// </summary>
 public static class QueueProcessor
 {
