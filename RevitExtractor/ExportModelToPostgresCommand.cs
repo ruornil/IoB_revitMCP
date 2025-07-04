@@ -1,3 +1,5 @@
+
+using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using System;
@@ -9,6 +11,8 @@ namespace RevitExtractor
     /// Revit external command that exports element types, instances and their
     /// parameters to a PostgreSQL database.
     /// </summary>
+    
+    [Transaction(TransactionMode.Manual)]
     public class ExportModelToPostgresCommand : IExternalCommand
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
@@ -20,8 +24,16 @@ namespace RevitExtractor
                 return Result.Failed;
             }
 
-            // TODO: replace with actual connection string or load from configuration
-            string conn = "YOUR_CONNECTION_STRING";
+            string dllDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            string connPath = System.IO.Path.Combine(dllDir, "revit-conn.txt");
+
+            if (!System.IO.File.Exists(connPath))
+            {
+                message = $"Connection file not found: {connPath}";
+                return Result.Failed;
+            }
+
+            string conn = System.IO.File.ReadAllText(connPath).Trim();
             var db = new PostgresDb(conn);
 
             string modelPath = doc.PathName;
