@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Npgsql;
 
 public class ListFamiliesAndTypesCommand : ICommand
 {
@@ -17,15 +16,10 @@ public class ListFamiliesAndTypesCommand : ICommand
         var result = new List<Dictionary<string, object>>();
 
         string conn = DbConfigHelper.GetConnectionString(input);
-        PostgresDb db = null;
-        NpgsqlConnection sharedConn = null;
-        NpgsqlTransaction tx = null;
+        BatchedPostgresDb db = null;
         if (!string.IsNullOrEmpty(conn))
         {
-            db = new PostgresDb(conn);
-            sharedConn = new NpgsqlConnection(conn);
-            sharedConn.Open();
-            tx = sharedConn.BeginTransaction();
+            db = new BatchedPostgresDb(conn);
         }
 
         DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
@@ -85,8 +79,7 @@ public class ListFamiliesAndTypesCommand : ICommand
 
                     if (db != null)
                     {
-                        db.UpsertFamily(type.FamilyName, type.Name, type.Category?.Name ?? string.Empty, type.UniqueId, doc.PathName, lastSaved,
-                            sharedConn, tx);
+                        db.UpsertFamily(type.FamilyName, type.Name, type.Category?.Name ?? string.Empty, type.UniqueId, doc.PathName, lastSaved);
                     }
                 }
             }
@@ -94,9 +87,8 @@ public class ListFamiliesAndTypesCommand : ICommand
             if (db != null)
             {
                 db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved,
-                    null, null, sharedConn, tx);
-                tx.Commit();
-                sharedConn.Close();
+                    null, null);
+                db.CommitAll();
             }
 
             ModelCache.Set(cacheKey, lastSaved, result);

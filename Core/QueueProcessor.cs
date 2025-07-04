@@ -41,7 +41,7 @@ public static class QueueProcessor
     {
         string conn = System.Configuration.ConfigurationManager.ConnectionStrings["mcp"]?.ConnectionString;
         if (string.IsNullOrEmpty(conn)) return;
-        var db = new PostgresDb(conn);
+        var db = new BatchedPostgresDb(conn);
         var planCmd = new PlanExecutorCommand();
         while (!token.IsCancellationRequested)
         {
