@@ -59,14 +59,26 @@ public static class RevitHelpers
             foreach (Parameter p in el.Parameters)
             {
                 if (p.Definition?.Name == null) continue;
-                string val = p.StorageType switch
+
+                string val = string.Empty;
+                switch (p.StorageType)
                 {
-                    StorageType.String => p.AsString(),
-                    StorageType.Integer => p.AsInteger().ToString(),
-                    StorageType.Double => p.AsDouble().ToString(),
-                    StorageType.ElementId => p.AsElementId().IntegerValue.ToString(),
-                    _ => string.Empty
-                };
+                    case StorageType.String:
+                        val = p.AsString();
+                        break;
+                    case StorageType.Integer:
+                        val = p.AsInteger().ToString();
+                        break;
+                    case StorageType.Double:
+                        val = p.AsDouble().ToString();
+                        break;
+                    case StorageType.ElementId:
+                        val = p.AsElementId().IntegerValue.ToString();
+                        break;
+                    default:
+                        val = string.Empty;
+                        break;
+                }
                 paramDict[p.Definition.Name] = val ?? string.Empty;
             }
             item["parameters"] = paramDict;
