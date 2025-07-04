@@ -3,6 +3,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace RevitExtractor
 {
@@ -68,6 +69,7 @@ namespace RevitExtractor
                 {
                     foreach (Parameter param in type.Parameters)
                     {
+                        if (param.Definition == null) continue;
                         string val = ParamToString(param);
                         db.StageTypeParameter(type.Id.IntegerValue, param.Definition.Name, val,
                             new[] { type.Category?.Name ?? string.Empty }, lastSaved);
@@ -78,6 +80,7 @@ namespace RevitExtractor
                 {
                     foreach (Parameter param in element.Parameters)
                     {
+                        if (param.Definition == null) continue;
                         string val = ParamToString(param);
                         db.StageParameter(element.Id.IntegerValue, param.Definition.Name, val,
                             param.IsShared || param.IsReadOnly,
@@ -102,19 +105,36 @@ namespace RevitExtractor
 
         private static string ParamToString(Parameter p)
         {
-            switch (p.StorageType)
+            try
             {
-                case StorageType.String:
-                    return p.AsString();
-                case StorageType.Integer:
-                    return p.AsInteger().ToString();
-                case StorageType.Double:
-                    return p.AsDouble().ToString();
-                case StorageType.ElementId:
-                    return p.AsElementId().IntegerValue.ToString();
-                default:
-                    return string.Empty;
+                if (p == null || p.Definition == null || p.StorageType == StorageType.None)
+                    return null;
+
+                switch (p.StorageType)
+                {
+                    case StorageType.String:
+                        return SanitizeString(p.AsString());
+                    case StorageType.Integer:
+                        return p.AsInteger().ToString(CultureInfo.InvariantCulture);
+                    case StorageType.Double:
+                        return p.AsDouble().ToString(CultureInfo.InvariantCulture);
+                    case StorageType.ElementId:
+                        return p.AsElementId().IntegerValue.ToString(CultureInfo.InvariantCulture);
+                    default:
+                        return null;
+                }
             }
+            catch
+            {
+                // Unexpected conversion failure
+                return null;
+            }
+        }
+
+        private static string SanitizeString(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return value;
+            return value.Replace("\0", string.Empty);
         }
 
         private static Guid ParseGuid(string uid)
