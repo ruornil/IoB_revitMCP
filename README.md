@@ -50,6 +50,7 @@ future.
 | `ListSheets`             | List all Revit sheets.                                                  |
 | `ListSchedules`          | List all schedules in the model.                                        |
 | `ListViews`              | List all Revit views.                                                   |
+| `CaptureToolState`       | Inspect active view and selection.                     |
 | `ModifyElements`         | Update types and/or parameters for elements.                            |
 | `NewSharedParameter`     | Create and bind a shared parameter to categories.                       |
 | `PlaceViewsOnSheet`      | Place view(s) on a sheet with layout options.                           |
@@ -83,6 +84,10 @@ future.
 | **ListSchedules**          | `action` and DB connection string\                                          | –                                                                         | `schedules` list with id, name and category\                                                                                              |
 | **ListModelContext**       | `action` only                                                               | –                                                                         | Returns model metadata including `model_name`, `guid`, `last_saved`, and lists of project parameters\                                     |
 | **ListViews**              | `action` and DB connection string\                                          | –                                                                         | `views` list with metadata including scale and associated sheet id\                                                                       |
+| **CaptureToolState**       | `action`
+                           | –
+                       | `tool_state` object describing active view and selected elements\
+   |
 | **ListSheets**             | `action` and DB connection string\                                          | –                                                                         | `sheets` list with name, number and title block                                                                                           |
 | **ModifyElements**         | `action`, `changes` (JSON array)\                                           | –                                                                         | `status`, per-element results with `type_changed`, `updated_parameters`, `skipped_parameters`                                             |
 | **NewSharedParameter**     | `action`, `parameter_name`, `parameter_group`, `categories`, `binding_type` | –                                                                         | `parameter`, `categories` on success or error details\                                                                                    |

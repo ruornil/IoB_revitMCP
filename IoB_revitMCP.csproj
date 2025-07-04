@@ -150,6 +150,7 @@
     <Compile Include="Commands\ListViewsCommand.cs" />
     <Compile Include="Commands\ListSheetsCommand.cs" />
     <Compile Include="Commands\ListSchedulesCommand.cs" />
+    <Compile Include="Commands\CaptureToolStateCommand.cs" />
     <Compile Include="Commands\SyncModelToSqlCommand.cs" />
     <Compile Include="Commands\QuerySqlCommand.cs" />
     <Compile Include="Commands\ListModelContextCommand.cs" />
