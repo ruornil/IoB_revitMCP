@@ -1,15 +1,18 @@
+// Batching enhancement for Revit to PostgreSQL export with safe chunked batching
 using Npgsql;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
-/// <summary>
-/// Extends <see cref="PostgresDb"/> with batching capabilities. SQL commands
-/// are executed on a single transaction until <see cref="CommitAll"/> is called.
-/// </summary>
 public class BatchedPostgresDb : PostgresDb, IDisposable
 {
     private NpgsqlConnection _conn;
     private NpgsqlTransaction _tx;
     private readonly string _connStr;
+
+    private const int ChunkSize = 1000;
+    private readonly List<string> _elementSqls = new();
+    private readonly List<string> _paramSqls = new();
 
     public BatchedPostgresDb(string connectionString) : base(connectionString)
     {
@@ -30,81 +33,89 @@ public class BatchedPostgresDb : PostgresDb, IDisposable
         string typeName, string level, string docId, DateTime lastSaved)
     {
         EnsureTransaction();
-        base.UpsertElement(id, guid, name, category, typeName, level, docId, lastSaved, _conn, _tx);
+        string esc(string s) => s != null ? "'" + s.Replace("'", "''") + "'" : "NULL";
+        _elementSqls.Add($"({id}, '{guid}', {esc(name)}, {esc(category)}, {esc(typeName)}, {esc(level)}, {esc(docId)}, '{lastSaved:O}')");
+        if (_elementSqls.Count >= ChunkSize) FlushElements();
     }
 
     public void StageParameter(int elementId, string name, string value, bool isType,
         string[] applicable, DateTime lastSaved)
     {
         EnsureTransaction();
-        base.UpsertParameter(elementId, name, value, isType, applicable, lastSaved, _conn, _tx);
+        string esc(string s) => s != null ? "'" + s.Replace("'", "''") + "'" : "NULL";
+        string cats = applicable != null ? $"ARRAY[{string.Join(",", applicable.Select(c => esc(c)))}]" : "NULL";
+        _paramSqls.Add($"({elementId}, {esc(name)}, {esc(value)}, {(isType ? "TRUE" : "FALSE")}, {cats}, '{lastSaved:O}')");
+        if (_paramSqls.Count >= ChunkSize) FlushParameters();
     }
 
-    // Route other upserts through the same transaction when it exists
-    public new void UpsertModelInfo(string docId, string modelName, Guid guid, DateTime lastSaved,
-        string projectInfo = null, string projectParameters = null,
-        NpgsqlConnection conn = null, NpgsqlTransaction tx = null)
+    private void FlushElements()
     {
-        EnsureTransaction();
-        base.UpsertModelInfo(docId, modelName, guid, lastSaved, projectInfo, projectParameters, _conn, _tx);
+        if (_elementSqls.Count == 0) return;
+        try
+        {
+            string sql = "INSERT INTO revit_elements (id, guid, name, category, type_name, level, doc_id, last_saved) VALUES "
+                + string.Join(",\n", _elementSqls) + @"
+                ON CONFLICT (id) DO UPDATE SET
+                    guid = EXCLUDED.guid,
+                    name = EXCLUDED.name,
+                    category = EXCLUDED.category,
+                    type_name = EXCLUDED.type_name,
+                    level = EXCLUDED.level,
+                    doc_id = EXCLUDED.doc_id,
+                    last_saved = EXCLUDED.last_saved
+                WHERE EXCLUDED.last_saved > revit_elements.last_saved";
+            new NpgsqlCommand(sql, _conn, _tx).ExecuteNonQuery();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error flushing elements: " + ex.Message);
+            throw;
+        }
+        _elementSqls.Clear();
     }
 
-    public new void UpsertElementType(int id, Guid guid, string family, string typeName,
-        string category, string docId, DateTime lastSaved,
-        NpgsqlConnection conn = null, NpgsqlTransaction tx = null)
+    private void FlushParameters()
     {
-        EnsureTransaction();
-        base.UpsertElementType(id, guid, family, typeName, category, docId, lastSaved, _conn, _tx);
-    }
-
-    public new void UpsertCategory(string enumVal, string name, string group, string description, Guid guid, DateTime lastSaved,
-        NpgsqlConnection conn = null, NpgsqlTransaction tx = null)
-    {
-        EnsureTransaction();
-        base.UpsertCategory(enumVal, name, group, description, guid, lastSaved, _conn, _tx);
-    }
-
-    public new void UpsertView(int id, Guid guid, string name, string viewType, int scale,
-        string discipline, string detail, int? sheetId, string docId, DateTime lastSaved,
-        NpgsqlConnection conn = null, NpgsqlTransaction tx = null)
-    {
-        EnsureTransaction();
-        base.UpsertView(id, guid, name, viewType, scale, discipline, detail, sheetId, docId, lastSaved, _conn, _tx);
-    }
-
-    public new void UpsertSheet(int id, Guid guid, string name, string number, string titleBlock, string docId, DateTime lastSaved,
-        NpgsqlConnection conn = null, NpgsqlTransaction tx = null)
-    {
-        EnsureTransaction();
-        base.UpsertSheet(id, guid, name, number, titleBlock, docId, lastSaved, _conn, _tx);
-    }
-
-    public new void UpsertSchedule(int id, Guid guid, string name, string category, string docId, DateTime lastSaved,
-        NpgsqlConnection conn = null, NpgsqlTransaction tx = null)
-    {
-        EnsureTransaction();
-        base.UpsertSchedule(id, guid, name, category, docId, lastSaved, _conn, _tx);
-    }
-
-    public new void UpsertFamily(string name, string familyType, string category, string guid, string docId, DateTime lastSaved,
-        NpgsqlConnection conn = null, NpgsqlTransaction tx = null)
-    {
-        EnsureTransaction();
-        base.UpsertFamily(name, familyType, category, guid, docId, lastSaved, _conn, _tx);
+        if (_paramSqls.Count == 0) return;
+        try
+        {
+            string sql = "INSERT INTO revit_parameters (element_id, param_name, param_value, is_type, applicable_categories, last_saved) VALUES "
+                + string.Join(",\n", _paramSqls) + @"
+                ON CONFLICT (element_id, param_name) DO UPDATE SET
+                    param_value = EXCLUDED.param_value,
+                    is_type = EXCLUDED.is_type,
+                    applicable_categories = EXCLUDED.applicable_categories,
+                    last_saved = EXCLUDED.last_saved
+                WHERE EXCLUDED.last_saved > revit_parameters.last_saved";
+            new NpgsqlCommand(sql, _conn, _tx).ExecuteNonQuery();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error flushing parameters: " + ex.Message);
+            throw;
+        }
+        _paramSqls.Clear();
     }
 
     public void CommitAll()
     {
-        if (_tx != null)
+        try
         {
-            _tx.Commit();
-            _tx.Dispose();
-            _tx = null;
+            FlushElements();
+            FlushParameters();
+            _tx?.Commit();
         }
-        if (_conn != null)
+        catch (Exception ex)
         {
-            _conn.Close();
-            _conn.Dispose();
+            Console.WriteLine("Commit failed: " + ex.Message);
+            throw;
+        }
+        finally
+        {
+            _tx?.Dispose();
+            _conn?.Close();
+            _conn?.Dispose();
+            _tx = null;
             _conn = null;
         }
     }
