@@ -3,6 +3,7 @@ using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 public class BatchedPostgresDb : PostgresDb, IDisposable
 {
@@ -13,8 +14,27 @@ public class BatchedPostgresDb : PostgresDb, IDisposable
     private const int ChunkSize = 1000;
     private readonly List<string> _elementSqls = new List<string>();
     private readonly HashSet<int> _elementIds = new HashSet<int>();
-    private readonly Dictionary<string, string> _paramSqlMap = new Dictionary<string, string>();
-    private readonly Dictionary<string, string> _typeParamSqlMap = new Dictionary<string, string>();
+    private class ParameterRow
+    {
+        public int ElementId;
+        public string Name;
+        public string Value;
+        public bool IsType;
+        public string[] Categories;
+        public DateTime LastSaved;
+    }
+
+    private class TypeParameterRow
+    {
+        public int TypeId;
+        public string Name;
+        public string Value;
+        public string[] Categories;
+        public DateTime LastSaved;
+    }
+
+    private readonly Dictionary<string, ParameterRow> _paramSqlMap = new Dictionary<string, ParameterRow>();
+    private readonly Dictionary<string, TypeParameterRow> _typeParamSqlMap = new Dictionary<string, TypeParameterRow>();
     private readonly List<string> _elementTypeSqls = new List<string>();
     private readonly HashSet<int> _elementTypeIds = new HashSet<int>();
 
@@ -74,13 +94,16 @@ public class BatchedPostgresDb : PostgresDb, IDisposable
         string[] applicable, DateTime lastSaved)
     {
         EnsureTransaction();
-        string esc(string s) => s != null ? "'" + s.Replace("'", "''") + "'" : "NULL";
-        string cats = (applicable != null && applicable.Length > 0)
-            ? $"ARRAY[{string.Join(",", applicable.Select(esc))}]"
-            : "ARRAY[]::text[]";
         string key = elementId + "::" + name;
-        string sql = $"({elementId}, {esc(name)}, {esc(value)}, {(isType ? "TRUE" : "FALSE")}, {cats}, '{lastSaved:O}')";
-        _paramSqlMap[key] = sql;
+        _paramSqlMap[key] = new ParameterRow
+        {
+            ElementId = elementId,
+            Name = name,
+            Value = value,
+            IsType = isType,
+            Categories = applicable,
+            LastSaved = lastSaved
+        };
 
         if (_paramSqlMap.Count >= ChunkSize) FlushParameters();
     }
@@ -88,13 +111,15 @@ public class BatchedPostgresDb : PostgresDb, IDisposable
     public void StageTypeParameter(int typeId, string name, string value, string[] applicable, DateTime lastSaved)
     {
         EnsureTransaction();
-        string esc(string s) => s != null ? "'" + s.Replace("'", "''") + "'" : "NULL";
-        string cats = (applicable != null && applicable.Length > 0)
-            ? $"ARRAY[{string.Join(",", applicable.Select(esc))}]"
-            : "ARRAY[]::text[]";
         string key = typeId + "::" + name;
-        string sql = $"({typeId}, {esc(name)}, {esc(value)}, {cats}, '{lastSaved:O}')";
-        _typeParamSqlMap[key] = sql;
+        _typeParamSqlMap[key] = new TypeParameterRow
+        {
+            TypeId = typeId,
+            Name = name,
+            Value = value,
+            Categories = applicable,
+            LastSaved = lastSaved
+        };
 
         if (_typeParamSqlMap.Count >= ChunkSize) FlushTypeParameters();
             FlushElementTypes();
@@ -130,19 +155,36 @@ public class BatchedPostgresDb : PostgresDb, IDisposable
 
     private void FlushParameters()
     {
-        // no need to flush elements here as they are committed earlier
         if (_paramSqlMap.Count == 0) return;
         try
         {
-            string sql = "INSERT INTO revit_parameters (element_id, param_name, param_value, is_type, applicable_categories, last_saved) VALUES "
-                + string.Join(",\n", _paramSqlMap.Values) + @"
+            var sb = new StringBuilder();
+            var cmd = new NpgsqlCommand(string.Empty, _conn, _tx);
+            int i = 0;
+            foreach (var row in _paramSqlMap.Values)
+            {
+                if (sb.Length > 0) sb.Append(",");
+                sb.Append($"(@el{i}, @name{i}, @val{i}, @typ{i}, @cat{i}, @ts{i})");
+
+                cmd.Parameters.AddWithValue($"@el{i}", row.ElementId);
+                cmd.Parameters.AddWithValue($"@name{i}", (object)row.Name ?? DBNull.Value);
+                cmd.Parameters.AddWithValue($"@val{i}", (object)row.Value ?? DBNull.Value);
+                cmd.Parameters.AddWithValue($"@typ{i}", row.IsType);
+                cmd.Parameters.AddWithValue($"@cat{i}", (object)row.Categories ?? DBNull.Value);
+                cmd.Parameters.AddWithValue($"@ts{i}", row.LastSaved);
+                i++;
+            }
+
+            cmd.CommandText = "INSERT INTO revit_parameters (element_id, param_name, param_value, is_type, applicable_categories, last_saved) VALUES "
+                + sb.ToString() + @"
                 ON CONFLICT (element_id, param_name) DO UPDATE SET
                     param_value = EXCLUDED.param_value,
                     is_type = EXCLUDED.is_type,
                     applicable_categories = EXCLUDED.applicable_categories,
                     last_saved = EXCLUDED.last_saved
                 WHERE EXCLUDED.last_saved > revit_parameters.last_saved";
-            new NpgsqlCommand(sql, _conn, _tx).ExecuteNonQuery();
+
+            cmd.ExecuteNonQuery();
         }
         catch (Exception ex)
         {
@@ -158,14 +200,31 @@ public class BatchedPostgresDb : PostgresDb, IDisposable
         if (_typeParamSqlMap.Count == 0) return;
         try
         {
-            string sql = "INSERT INTO revit_type_parameters (element_type_id, param_name, param_value, applicable_categories, last_saved) VALUES "
-                + string.Join(",\n", _typeParamSqlMap.Values) + @"
+            var sb = new StringBuilder();
+            var cmd = new NpgsqlCommand(string.Empty, _conn, _tx);
+            int i = 0;
+            foreach (var row in _typeParamSqlMap.Values)
+            {
+                if (sb.Length > 0) sb.Append(",");
+                sb.Append($"(@tid{i}, @name{i}, @val{i}, @cat{i}, @ts{i})");
+
+                cmd.Parameters.AddWithValue($"@tid{i}", row.TypeId);
+                cmd.Parameters.AddWithValue($"@name{i}", (object)row.Name ?? DBNull.Value);
+                cmd.Parameters.AddWithValue($"@val{i}", (object)row.Value ?? DBNull.Value);
+                cmd.Parameters.AddWithValue($"@cat{i}", (object)row.Categories ?? DBNull.Value);
+                cmd.Parameters.AddWithValue($"@ts{i}", row.LastSaved);
+                i++;
+            }
+
+            cmd.CommandText = "INSERT INTO revit_type_parameters (element_type_id, param_name, param_value, applicable_categories, last_saved) VALUES "
+                + sb.ToString() + @"
                 ON CONFLICT (element_type_id, param_name) DO UPDATE SET
                     param_value = EXCLUDED.param_value,
                     applicable_categories = EXCLUDED.applicable_categories,
                     last_saved = EXCLUDED.last_saved
                 WHERE EXCLUDED.last_saved > revit_type_parameters.last_saved";
-            new NpgsqlCommand(sql, _conn, _tx).ExecuteNonQuery();
+
+            cmd.ExecuteNonQuery();
         }
         catch (Exception ex)
         {
