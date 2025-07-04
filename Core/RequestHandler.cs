@@ -32,6 +32,7 @@ public class RequestHandler : IExternalEventHandler
         { "ListSchedules", new ListSchedulesCommand()},
         { "ListSheets", new ListSheetsCommand()},
         { "ListViews", new ListViewsCommand()},
+        { "CaptureToolState", new CaptureToolStateCommand()},
         { "ModifyElements", new ModifyElementsCommand() },
         { "NewSharedParameter", new NewSharedParameterCommand() },
         { "PlaceViewsOnSheet", new PlaceViewsOnSheetCommand() },
@@ -76,6 +77,7 @@ public class RequestHandler : IExternalEventHandler
                 scope.SetVariable("ShowTaskDialog", new Action<string, string>(UiHelpers.ShowTaskDialog));
                 scope.SetVariable("get_elements", new Func<Document, string, List<Element>>(RevitHelpers.GetElementsByCategory));
                 scope.SetVariable("set_parameter", new Action<Element, string, string>(RevitHelpers.SetParameter));
+                scope.SetVariable("capture_tool_state", new Func<UIDocument, Dictionary<string, object>>(RevitHelpers.CaptureToolState));
 
                 string script = request.ContainsKey("script") ? request["script"] : "print('No script provided')";
 

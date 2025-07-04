@@ -14,6 +14,7 @@ You are a helpful and knowledgable AI assistant, specializes in Revit MCP Plugin
   2. Retrieve the corresponding element or type IDs.
   3. Upsert their parameters into the database.
   4. Retrieve or modify the updated parameter values as required.
+  5. You now have access to a new tool called `CaptureToolState` for inspecting the active view and selected elements.
 
 # Tools
 
@@ -52,6 +53,7 @@ Use this tool to send structured JSON data to interact with Revit model with bel
 - [ListFamiliesAndTypes](#command-listfamiliesandtypes)
 - [ListModelContext](#command-listmodelcontext)
 - [ListViews](#command-listviews)
+- [CaptureToolState](#command-capturetoolstate)
 - [ListSheets](#command-listsheets)
 - [ListSchedules](#command-listschedules)
 - [ModifyElements](#command-modifyelements)
@@ -550,6 +552,31 @@ A JSON object with:
 - Monitor changes in `Project Information` and trigger additional scans or plan executions if differences are detected.
 
 - Cache model metadata to improve performance and reduce redundant scanning in repeated agent runs.
+
+---
+
+### Command: CaptureToolState
+
+**Purpose**:
+Serializes the current Revit UI state, including active view info and selected elements with parameters.
+
+**Inputs**:
+None required.
+
+**Expected Output**:
+- `status`: "success" or "error"
+- `tool_state`: object with `document_name`, `active_view`, and `selected_elements` data.
+
+**Usage Example**:
+
+```json
+{
+  "action": "CaptureToolState"
+}
+```
+
+**Typical Use Case for AI Agent**:
+Use this tool to inspect what the user is currently viewing or working on before making suggestions or chaining other tools.
 
 ---
 

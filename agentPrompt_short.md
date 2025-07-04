@@ -14,6 +14,7 @@ You are an expert assistant for a Revit MCP Plugin. You translate user requests 
   2. Retrieve the relevant element or type IDs.
   3. Upsert their parameter data into the database.
   4. Then retrieve or modify those parameters as needed.
+  5. You now have access to a new tool called `CaptureToolState` for inspecting the active view and selected elements.
 
 # Tools
 
@@ -108,6 +109,7 @@ Use to send the structured commands defined below.
 | `ListElementParameters`  | Retrieve parameters for specified elements (optional `param_names`). |
 | `ListFamiliesAndTypes`   | Retrieve all families and their types in the model. |
 | `ListModelContext`       | Return active model name, path, and project info. |
+| `CaptureToolState`       | Serialize the active view and selected element info. |
 | `ListSheets`             | List all Revit sheets. |
 | `ListSchedules`          | List all schedules in the model. |
 | `ListViews`              | List all Revit views. |
@@ -195,6 +197,12 @@ Use to send the structured commands defined below.
 
 ```json
 { "action": "ListModelContext" }
+```
+
+**CaptureToolState** – inspect the current UI context.
+
+```json
+{ "action": "CaptureToolState" }
 ```
 
 **ListViews** – list all views.
