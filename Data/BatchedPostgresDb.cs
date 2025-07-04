@@ -11,8 +11,9 @@ public class BatchedPostgresDb : PostgresDb, IDisposable
     private readonly string _connStr;
 
     private const int ChunkSize = 1000;
-    private readonly List<string> _elementSqls = new();
-    private readonly List<string> _paramSqls = new();
+    private readonly List<string> _elementSqls = new List<string>();
+    private readonly HashSet<int> _elementIds = new HashSet<int>();
+    private readonly Dictionary<string, string> _paramSqlMap = new Dictionary<string, string>();
 
     public BatchedPostgresDb(string connectionString) : base(connectionString)
     {
@@ -33,8 +34,12 @@ public class BatchedPostgresDb : PostgresDb, IDisposable
         string typeName, string level, string docId, DateTime lastSaved)
     {
         EnsureTransaction();
+        if (_elementIds.Contains(id)) return; // prevent duplicates
+
         string esc(string s) => s != null ? "'" + s.Replace("'", "''") + "'" : "NULL";
         _elementSqls.Add($"({id}, '{guid}', {esc(name)}, {esc(category)}, {esc(typeName)}, {esc(level)}, {esc(docId)}, '{lastSaved:O}')");
+        _elementIds.Add(id);
+
         if (_elementSqls.Count >= ChunkSize) FlushElements();
     }
 
@@ -44,8 +49,11 @@ public class BatchedPostgresDb : PostgresDb, IDisposable
         EnsureTransaction();
         string esc(string s) => s != null ? "'" + s.Replace("'", "''") + "'" : "NULL";
         string cats = applicable != null ? $"ARRAY[{string.Join(",", applicable.Select(c => esc(c)))}]" : "NULL";
-        _paramSqls.Add($"({elementId}, {esc(name)}, {esc(value)}, {(isType ? "TRUE" : "FALSE")}, {cats}, '{lastSaved:O}')");
-        if (_paramSqls.Count >= ChunkSize) FlushParameters();
+        string key = elementId + "::" + name;
+        string sql = $"({elementId}, {esc(name)}, {esc(value)}, {(isType ? "TRUE" : "FALSE")}, {cats}, '{lastSaved:O}')";
+        _paramSqlMap[key] = sql;
+
+        if (_paramSqlMap.Count >= ChunkSize) FlushParameters();
     }
 
     private void FlushElements()
@@ -72,15 +80,19 @@ public class BatchedPostgresDb : PostgresDb, IDisposable
             throw;
         }
         _elementSqls.Clear();
+        _elementIds.Clear();
     }
 
     private void FlushParameters()
     {
-        if (_paramSqls.Count == 0) return;
+        // Ensure all related elements are flushed before parameters to satisfy FK constraints
+        if (_elementSqls.Count > 0)
+            FlushElements();
+        if (_paramSqlMap.Count == 0) return;
         try
         {
             string sql = "INSERT INTO revit_parameters (element_id, param_name, param_value, is_type, applicable_categories, last_saved) VALUES "
-                + string.Join(",\n", _paramSqls) + @"
+                + string.Join(",\n", _paramSqlMap.Values) + @"
                 ON CONFLICT (element_id, param_name) DO UPDATE SET
                     param_value = EXCLUDED.param_value,
                     is_type = EXCLUDED.is_type,
@@ -94,7 +106,7 @@ public class BatchedPostgresDb : PostgresDb, IDisposable
             Console.WriteLine("Error flushing parameters: " + ex.Message);
             throw;
         }
-        _paramSqls.Clear();
+        _paramSqlMap.Clear();
     }
 
     public void CommitAll()

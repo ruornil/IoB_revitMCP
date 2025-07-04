@@ -1,4 +1,3 @@
-
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
@@ -11,7 +10,6 @@ namespace RevitExtractor
     /// Revit external command that exports element types, instances and their
     /// parameters to a PostgreSQL database.
     /// </summary>
-    
     [Transaction(TransactionMode.Manual)]
     public class ExportModelToPostgresCommand : IExternalCommand
     {
@@ -41,24 +39,25 @@ namespace RevitExtractor
 
             try
             {
-                // Extract element types
+                // PHASE 1: Export element types
                 var typeCollector = new FilteredElementCollector(doc).WhereElementIsElementType();
                 var typeMap = new Dictionary<ElementId, string>();
                 foreach (ElementType type in typeCollector)
                 {
                     db.UpsertElementType(type.Id.IntegerValue, ParseGuid(type.UniqueId), type.FamilyName,
                         type.Name, type.Category?.Name ?? string.Empty, modelPath, lastSaved);
+
                     if (!typeMap.ContainsKey(type.Id))
                         typeMap[type.Id] = type.Name;
                 }
 
-                // Extract elements and parameters
+                // Export instances (without parameters)
                 var collector = new FilteredElementCollector(doc).WhereElementIsNotElementType();
                 foreach (var element in collector)
                 {
                     string typeName = typeMap.TryGetValue(element.GetTypeId(), out var tn) ? tn : string.Empty;
-
                     string levelName = string.Empty;
+
                     if (element.LevelId != ElementId.InvalidElementId)
                     {
                         var lvl = doc.GetElement(element.LevelId) as Level;
@@ -67,7 +66,24 @@ namespace RevitExtractor
 
                     db.StageElement(element.Id.IntegerValue, ParseGuid(element.UniqueId), element.Name,
                         element.Category?.Name ?? string.Empty, typeName, levelName, modelPath, lastSaved);
+                }
 
+                db.CommitAll(); // Ensure all elements are written before parameters
+
+                // PHASE 2: Export element type parameters
+                foreach (ElementType type in typeCollector)
+                {
+                    foreach (Parameter param in type.Parameters)
+                    {
+                        string val = ParamToString(param);
+                        db.StageParameter(type.Id.IntegerValue, param.Definition.Name, val,
+                            true, new[] { type.Category?.Name ?? string.Empty }, lastSaved);
+                    }
+                }
+
+                // Export instance parameters
+                foreach (var element in collector)
+                {
                     foreach (Parameter param in element.Parameters)
                     {
                         string val = ParamToString(param);
