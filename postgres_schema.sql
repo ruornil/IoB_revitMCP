@@ -43,6 +43,16 @@ CREATE TABLE IF NOT EXISTS revit_parameters (
     CONSTRAINT unique_element_param UNIQUE (element_id, param_name)
 );
 
+CREATE TABLE IF NOT EXISTS revit_type_parameters (
+    id SERIAL PRIMARY KEY,
+    element_type_id INTEGER,
+    param_name TEXT,
+    param_value TEXT,
+    applicable_categories TEXT[],
+    last_saved TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_type_param UNIQUE (element_type_id, param_name)
+);
+
 -- Table: revit_categories
 CREATE TABLE IF NOT EXISTS revit_categories (
     id SERIAL PRIMARY KEY,

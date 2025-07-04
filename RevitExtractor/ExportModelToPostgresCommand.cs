@@ -6,10 +6,6 @@ using System.Collections.Generic;
 
 namespace RevitExtractor
 {
-    /// <summary>
-    /// Revit external command that exports element types, instances and their
-    /// parameters to a PostgreSQL database.
-    /// </summary>
     [Transaction(TransactionMode.Manual)]
     public class ExportModelToPostgresCommand : IExternalCommand
     {
@@ -39,19 +35,17 @@ namespace RevitExtractor
 
             try
             {
-                // PHASE 1: Export element types
                 var typeCollector = new FilteredElementCollector(doc).WhereElementIsElementType();
                 var typeMap = new Dictionary<ElementId, string>();
                 foreach (ElementType type in typeCollector)
                 {
-                    db.UpsertElementType(type.Id.IntegerValue, ParseGuid(type.UniqueId), type.FamilyName,
+                    db.StageElementType(type.Id.IntegerValue, ParseGuid(type.UniqueId), type.FamilyName,
                         type.Name, type.Category?.Name ?? string.Empty, modelPath, lastSaved);
 
                     if (!typeMap.ContainsKey(type.Id))
                         typeMap[type.Id] = type.Name;
                 }
 
-                // Export instances (without parameters)
                 var collector = new FilteredElementCollector(doc).WhereElementIsNotElementType();
                 foreach (var element in collector)
                 {
@@ -68,20 +62,18 @@ namespace RevitExtractor
                         element.Category?.Name ?? string.Empty, typeName, levelName, modelPath, lastSaved);
                 }
 
-                db.CommitAll(); // Ensure all elements are written before parameters
+                db.CommitAll();
 
-                // PHASE 2: Export element type parameters
                 foreach (ElementType type in typeCollector)
                 {
                     foreach (Parameter param in type.Parameters)
                     {
                         string val = ParamToString(param);
-                        db.StageParameter(type.Id.IntegerValue, param.Definition.Name, val,
-                            true, new[] { type.Category?.Name ?? string.Empty }, lastSaved);
+                        db.StageTypeParameter(type.Id.IntegerValue, param.Definition.Name, val,
+                            new[] { type.Category?.Name ?? string.Empty }, lastSaved);
                     }
                 }
 
-                // Export instance parameters
                 foreach (var element in collector)
                 {
                     foreach (Parameter param in element.Parameters)
@@ -96,6 +88,10 @@ namespace RevitExtractor
             catch (Exception ex)
             {
                 message = ex.Message;
+
+                string log = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ERROR in ExportModelToPostgresCommand:\n{ex}\n";
+                System.IO.File.AppendAllText("revit-export-error.log", log);
+
                 return Result.Failed;
             }
 

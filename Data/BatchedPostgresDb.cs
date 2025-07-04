@@ -1,4 +1,4 @@
-// Batching enhancement for Revit to PostgreSQL export with safe chunked batching
+// Batching enhancement for Revit to PostgreSQL export with safe chunked batching, including element types
 using Npgsql;
 using System;
 using System.Collections.Generic;
@@ -14,19 +14,46 @@ public class BatchedPostgresDb : PostgresDb, IDisposable
     private readonly List<string> _elementSqls = new List<string>();
     private readonly HashSet<int> _elementIds = new HashSet<int>();
     private readonly Dictionary<string, string> _paramSqlMap = new Dictionary<string, string>();
+    private readonly Dictionary<string, string> _typeParamSqlMap = new Dictionary<string, string>();
+    private readonly List<string> _elementTypeSqls = new List<string>();
+    private readonly HashSet<int> _elementTypeIds = new HashSet<int>();
+
 
     public BatchedPostgresDb(string connectionString) : base(connectionString)
     {
         _connStr = connectionString;
     }
 
+    private void LogError(string context, Exception ex)
+    {
+        string msg = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ERROR in {context}:\n{ex}\n";
+        System.IO.File.AppendAllText("revit-export-error.log", msg);
+    }
     private void EnsureTransaction()
     {
-        if (_conn == null)
+        if (_conn != null) return;
+
+        if (string.IsNullOrWhiteSpace(_connStr))
+            throw new InvalidOperationException("PostgreSQL connection string is empty or null.");
+
+        try
         {
             _conn = new NpgsqlConnection(_connStr);
             _conn.Open();
             _tx = _conn.BeginTransaction();
+
+            // Optional: Print a message to Revit for debugging
+            // Autodesk.Revit.UI.TaskDialog.Show("DB Connection", "Connection to PostgreSQL established.");
+        }
+        catch (Exception ex)
+        {
+            string error = $"Failed to open PostgreSQL connection.\n\nConnection String:\n{_connStr}\n\nError:\n{ex.Message}";
+            Console.WriteLine(error);
+
+            // Optional: Show in Revit if running in UI context
+            // Autodesk.Revit.UI.TaskDialog.Show("Connection Error", error);
+
+            throw new ApplicationException("Could not establish PostgreSQL connection. See inner exception for details.", ex);
         }
     }
 
@@ -48,12 +75,29 @@ public class BatchedPostgresDb : PostgresDb, IDisposable
     {
         EnsureTransaction();
         string esc(string s) => s != null ? "'" + s.Replace("'", "''") + "'" : "NULL";
-        string cats = applicable != null ? $"ARRAY[{string.Join(",", applicable.Select(c => esc(c)))}]" : "NULL";
+        string cats = (applicable != null && applicable.Length > 0)
+            ? $"ARRAY[{string.Join(",", applicable.Select(esc))}]"
+            : "ARRAY[]::text[]";
         string key = elementId + "::" + name;
         string sql = $"({elementId}, {esc(name)}, {esc(value)}, {(isType ? "TRUE" : "FALSE")}, {cats}, '{lastSaved:O}')";
         _paramSqlMap[key] = sql;
 
         if (_paramSqlMap.Count >= ChunkSize) FlushParameters();
+    }
+
+    public void StageTypeParameter(int typeId, string name, string value, string[] applicable, DateTime lastSaved)
+    {
+        EnsureTransaction();
+        string esc(string s) => s != null ? "'" + s.Replace("'", "''") + "'" : "NULL";
+        string cats = (applicable != null && applicable.Length > 0)
+            ? $"ARRAY[{string.Join(",", applicable.Select(esc))}]"
+            : "ARRAY[]::text[]";
+        string key = typeId + "::" + name;
+        string sql = $"({typeId}, {esc(name)}, {esc(value)}, {cats}, '{lastSaved:O}')";
+        _typeParamSqlMap[key] = sql;
+
+        if (_typeParamSqlMap.Count >= ChunkSize) FlushTypeParameters();
+            FlushElementTypes();
     }
 
     private void FlushElements()
@@ -76,7 +120,8 @@ public class BatchedPostgresDb : PostgresDb, IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Error flushing elements: " + ex.Message);
+            LogError("FlushParameters", ex);
+            Console.WriteLine("Error flushing parameters: " + ex.Message);
             throw;
         }
         _elementSqls.Clear();
@@ -85,9 +130,7 @@ public class BatchedPostgresDb : PostgresDb, IDisposable
 
     private void FlushParameters()
     {
-        // Ensure all related elements are flushed before parameters to satisfy FK constraints
-        if (_elementSqls.Count > 0)
-            FlushElements();
+        // no need to flush elements here as they are committed earlier
         if (_paramSqlMap.Count == 0) return;
         try
         {
@@ -103,10 +146,73 @@ public class BatchedPostgresDb : PostgresDb, IDisposable
         }
         catch (Exception ex)
         {
+            LogError("FlushParameters", ex);
             Console.WriteLine("Error flushing parameters: " + ex.Message);
             throw;
         }
         _paramSqlMap.Clear();
+    }
+
+    private void FlushTypeParameters()
+    {
+        if (_typeParamSqlMap.Count == 0) return;
+        try
+        {
+            string sql = "INSERT INTO revit_type_parameters (element_type_id, param_name, param_value, applicable_categories, last_saved) VALUES "
+                + string.Join(",\n", _typeParamSqlMap.Values) + @"
+                ON CONFLICT (element_type_id, param_name) DO UPDATE SET
+                    param_value = EXCLUDED.param_value,
+                    applicable_categories = EXCLUDED.applicable_categories,
+                    last_saved = EXCLUDED.last_saved
+                WHERE EXCLUDED.last_saved > revit_type_parameters.last_saved";
+            new NpgsqlCommand(sql, _conn, _tx).ExecuteNonQuery();
+        }
+        catch (Exception ex)
+        {
+            LogError("FlushParameters", ex);
+            Console.WriteLine("Error flushing parameters: " + ex.Message);
+            throw;
+        }
+        _typeParamSqlMap.Clear();
+    }
+
+    public void StageElementType(int id, Guid guid, string family, string typeName, string category, string docId, DateTime lastSaved)
+    {
+        EnsureTransaction();
+        if (_elementTypeIds.Contains(id)) return;
+
+        string esc(string s) => s != null ? "'" + s.Replace("'", "''") + "'" : "NULL";
+        _elementTypeSqls.Add($"({id}, '{guid}', {esc(family)}, {esc(typeName)}, {esc(category)}, {esc(docId)}, '{lastSaved:O}')");
+        _elementTypeIds.Add(id);
+
+        if (_elementTypeSqls.Count >= ChunkSize) FlushElementTypes();
+    }
+
+    private void FlushElementTypes()
+    {
+        if (_elementTypeSqls.Count == 0) return;
+        try
+        {
+            string sql = "INSERT INTO revit_elementtypes (id, guid, family, type_name, category, doc_id, last_saved) VALUES "
+                + string.Join(",\n", _elementTypeSqls) + @"
+                ON CONFLICT (id) DO UPDATE SET
+                    guid = EXCLUDED.guid,
+                    family = EXCLUDED.family,
+                    type_name = EXCLUDED.type_name,
+                    category = EXCLUDED.category,
+                    doc_id = EXCLUDED.doc_id,
+                    last_saved = EXCLUDED.last_saved
+                WHERE EXCLUDED.last_saved > revit_elementtypes.last_saved";
+            new NpgsqlCommand(sql, _conn, _tx).ExecuteNonQuery();
+        }
+        catch (Exception ex)
+        {
+            LogError("FlushParameters", ex);
+            Console.WriteLine("Error flushing parameters: " + ex.Message);
+            throw;
+        }
+        _elementTypeSqls.Clear();
+        _elementTypeIds.Clear();
     }
 
     public void CommitAll()
@@ -114,7 +220,9 @@ public class BatchedPostgresDb : PostgresDb, IDisposable
         try
         {
             FlushElements();
+            FlushElementTypes();
             FlushParameters();
+            FlushTypeParameters();
             _tx?.Commit();
         }
         catch (Exception ex)
@@ -134,10 +242,7 @@ public class BatchedPostgresDb : PostgresDb, IDisposable
 
     public void Dispose()
     {
-        if (_tx != null || _conn != null)
-        {
-            _tx?.Dispose();
-            _conn?.Dispose();
-        }
+        _tx?.Dispose();
+        _conn?.Dispose();
     }
 }
