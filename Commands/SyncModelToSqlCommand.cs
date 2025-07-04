@@ -44,7 +44,7 @@ public class SyncModelToSqlCommand : ICommand
             return response;
         }
 
-        var db = new PostgresDb(conn);
+        var db = new BatchedPostgresDb(conn);
 
         // If async flag provided, enqueue a plan and return job id
         if (input.TryGetValue("async", out var asyncVal) && asyncVal == "true")
@@ -65,14 +65,12 @@ public class SyncModelToSqlCommand : ICommand
         }
 
         // Proceed as usual if the test passed
-        var sharedConn = new NpgsqlConnection(conn);
-        sharedConn.Open();
-        var tx = sharedConn.BeginTransaction();
+        
         DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
         if (db.GetModelLastSaved(doc.PathName) == lastSaved)
         {
             response["status"] = "up_to_date";
-            sharedConn.Dispose();
+            db.CommitAll();
             return response;
         }
 
@@ -126,16 +124,14 @@ public class SyncModelToSqlCommand : ICommand
 
         string jsonInfo = JsonSerializer.Serialize(info);
         string jsonParams = JsonSerializer.Serialize(parameters);
-        db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved, jsonInfo, jsonParams,
-            sharedConn, tx);
+        db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved, jsonInfo, jsonParams);
 
         // gather element types once and store in DB
         var typeCollector = new FilteredElementCollector(doc).WhereElementIsElementType();
         var typeMap = new Dictionary<ElementId, string>();
         foreach (ElementType type in typeCollector)
         {
-            db.UpsertElementType(type.Id.IntegerValue, ParseGuid(type.UniqueId), type.FamilyName, type.Name, type.Category?.Name ?? string.Empty, doc.PathName, lastSaved,
-                sharedConn, tx);
+            db.UpsertElementType(type.Id.IntegerValue, ParseGuid(type.UniqueId), type.FamilyName, type.Name, type.Category?.Name ?? string.Empty, doc.PathName, lastSaved);
             if (!typeMap.ContainsKey(type.Id))
                 typeMap[type.Id] = type.Name;
         }
@@ -154,12 +150,10 @@ public class SyncModelToSqlCommand : ICommand
                 var lvl = doc.GetElement(element.LevelId);
                 if (lvl != null) levelName = lvl.Name;
             }
-            db.UpsertElement(element.Id.IntegerValue, ParseGuid(element.UniqueId), element.Name, element.Category?.Name ?? string.Empty, typeName, levelName, doc.PathName, lastSaved,
-                sharedConn, tx);
+            db.StageElement(element.Id.IntegerValue, ParseGuid(element.UniqueId), element.Name, element.Category?.Name ?? string.Empty, typeName, levelName, doc.PathName, lastSaved);
             count++;
         }
-        tx.Commit();
-        sharedConn.Close();
+        db.CommitAll();
         response["status"] = "success";
         response["updated"] = count;
         response["model_name"] = doc.Title;

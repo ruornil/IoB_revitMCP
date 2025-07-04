@@ -25,7 +25,7 @@ public class ListModelContextCommand : ICommand
             string conn = DbConfigHelper.GetConnectionString(input);
             PostgresDb db = null;
             if (!string.IsNullOrEmpty(conn))
-                db = new PostgresDb(conn);
+                db = new BatchedPostgresDb(conn);
             DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
 
             // project information parameters

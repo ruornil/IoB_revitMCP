@@ -3,7 +3,6 @@ using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Npgsql;
 
 public class ListViewsCommand : ICommand
 {
@@ -22,15 +21,10 @@ public class ListViewsCommand : ICommand
         try
         {
             string conn = DbConfigHelper.GetConnectionString(input);
-            PostgresDb db = null;
-            NpgsqlConnection sharedConn = null;
-            NpgsqlTransaction tx = null;
+            BatchedPostgresDb db = null;
             if (!string.IsNullOrEmpty(conn))
             {
-                db = new PostgresDb(conn);
-                sharedConn = new NpgsqlConnection(conn);
-                sharedConn.Open();
-                tx = sharedConn.BeginTransaction();
+                db = new BatchedPostgresDb(conn);
             }
 
             DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
@@ -79,16 +73,14 @@ public class ListViewsCommand : ICommand
                 result.Add(item);
 
                 if (db != null)
-                    db.UpsertView(view.Id.IntegerValue, Guid.Empty, view.Name, view.ViewType.ToString(), view.Scale, discipline, view.DetailLevel.ToString(), sheetId, doc.PathName, lastSaved,
-                        sharedConn, tx);
+                    db.UpsertView(view.Id.IntegerValue, Guid.Empty, view.Name, view.ViewType.ToString(), view.Scale, discipline, view.DetailLevel.ToString(), sheetId, doc.PathName, lastSaved);
             }
 
             if (db != null)
             {
                 db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved,
-                    null, null, sharedConn, tx);
-                tx.Commit();
-                sharedConn.Close();
+                    null, null);
+                db.CommitAll();
             }
 
             ModelCache.Set(doc.PathName + "/views", lastSaved, result);

@@ -34,7 +34,7 @@ namespace RevitExtractor
             }
 
             string conn = System.IO.File.ReadAllText(connPath).Trim();
-            var db = new PostgresDb(conn);
+            var db = new BatchedPostgresDb(conn);
 
             string modelPath = doc.PathName;
             DateTime lastSaved = System.IO.File.GetLastWriteTime(modelPath);
@@ -65,13 +65,13 @@ namespace RevitExtractor
                         if (lvl != null) levelName = lvl.Name;
                     }
 
-                    db.UpsertElement(element.Id.IntegerValue, ParseGuid(element.UniqueId), element.Name,
+                    db.StageElement(element.Id.IntegerValue, ParseGuid(element.UniqueId), element.Name,
                         element.Category?.Name ?? string.Empty, typeName, levelName, modelPath, lastSaved);
 
                     foreach (Parameter param in element.Parameters)
                     {
                         string val = ParamToString(param);
-                        db.UpsertParameter(element.Id.IntegerValue, param.Definition.Name, val,
+                        db.StageParameter(element.Id.IntegerValue, param.Definition.Name, val,
                             param.IsShared || param.IsReadOnly,
                             new[] { element.Category?.Name ?? string.Empty }, lastSaved);
                     }
@@ -82,6 +82,8 @@ namespace RevitExtractor
                 message = ex.Message;
                 return Result.Failed;
             }
+
+            db.CommitAll();
 
             return Result.Succeeded;
         }

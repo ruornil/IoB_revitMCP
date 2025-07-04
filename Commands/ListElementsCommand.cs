@@ -4,7 +4,6 @@ using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Npgsql;
 
 public class ListElementsCommand : ICommand
 {
@@ -15,15 +14,10 @@ public class ListElementsCommand : ICommand
         string categoryName = input.ContainsKey("category") ? input["category"] : "Walls";
 
         string conn = DbConfigHelper.GetConnectionString(input);
-        PostgresDb db = null;
-        NpgsqlConnection sharedConn = null;
-        NpgsqlTransaction tx = null;
+        BatchedPostgresDb db = null;
         if (!string.IsNullOrEmpty(conn))
         {
-            db = new PostgresDb(conn);
-            sharedConn = new NpgsqlConnection(conn);
-            sharedConn.Open();
-            tx = sharedConn.BeginTransaction();
+            db = new BatchedPostgresDb(conn);
         }
 
         DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
@@ -62,18 +56,16 @@ public class ListElementsCommand : ICommand
                     if (lvl != null) levelName = lvl.Name;
                 }
 
-                db.UpsertElement(e.Id.IntegerValue, ParseGuid(e.UniqueId), e.Name,
-                    e.Category?.Name ?? string.Empty, typeName, levelName, doc.PathName, lastSaved,
-                    sharedConn, tx);
+                db.StageElement(e.Id.IntegerValue, ParseGuid(e.UniqueId), e.Name,
+                    e.Category?.Name ?? string.Empty, typeName, levelName, doc.PathName, lastSaved);
             }
         }
 
         if (db != null)
         {
             db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved,
-                null, null, sharedConn, tx);
-            tx.Commit();
-            sharedConn.Close();
+                null, null);
+            db.CommitAll();
         }
 
         ModelCache.Set(doc.PathName + "/elements-" + categoryName, lastSaved, elements);

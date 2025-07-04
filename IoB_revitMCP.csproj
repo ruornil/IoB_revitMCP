@@ -151,6 +151,7 @@
     <Compile Include="Commands\ListViewsCommand.cs" />
     <Compile Include="Commands\ListSheetsCommand.cs" />
     <Compile Include="Commands\ListSchedulesCommand.cs" />
+    <Compile Include="Commands\CaptureToolStateCommand.cs" />
     <Compile Include="Commands\SyncModelToSqlCommand.cs" />
     <Compile Include="Commands\QuerySqlCommand.cs" />
     <Compile Include="Commands\ListModelContextCommand.cs" />
@@ -174,6 +175,7 @@
     <Compile Include="Helpers\UiHelpers.cs" />
     <Compile Include="Core\QueueProcessor.cs" />
     <Compile Include="Data\PostgresDb.cs" />
+    <Compile Include="Data\BatchedPostgresDb.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

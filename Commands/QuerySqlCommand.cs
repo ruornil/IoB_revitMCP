@@ -48,7 +48,7 @@ public class QuerySqlCommand : ICommand
                 }
             }
 
-            var db = new PostgresDb(conn);
+            var db = new BatchedPostgresDb(conn);
             var results = db.Query(sql, parameters);
             response["status"] = "success";
             response["results"] = results;
