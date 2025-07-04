@@ -3,7 +3,6 @@ using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Npgsql;
 
 public class ListCategoriesCommand : ICommand
 {
@@ -29,10 +28,7 @@ public class ListCategoriesCommand : ICommand
                 return response;
             }
 
-            PostgresDb db = new PostgresDb(conn);
-            NpgsqlConnection sharedConn = new NpgsqlConnection(conn);
-            sharedConn.Open();
-            var tx = sharedConn.BeginTransaction();
+            BatchedPostgresDb db = new BatchedPostgresDb(conn);
             DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
             if (db.GetModelLastSaved(doc.PathName) == lastSaved)
             {
@@ -50,13 +46,11 @@ public class ListCategoriesCommand : ICommand
                 item["description"] = string.Empty;
                 categories.Add(item);
 
-                db.UpsertCategory(cat.Id.IntegerValue.ToString(), cat.Name, cat.CategoryType.ToString(), item["description"].ToString(), Guid.Empty, lastSaved,
-                    sharedConn, tx);
+                db.UpsertCategory(cat.Id.IntegerValue.ToString(), cat.Name, cat.CategoryType.ToString(), item["description"].ToString(), Guid.Empty, lastSaved);
             }
             db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved,
-                null, null, sharedConn, tx);
-            tx.Commit();
-            sharedConn.Close();
+                null, null);
+            db.CommitAll();
             response["status"] = "success";
             response["categories"] = categories;
         }

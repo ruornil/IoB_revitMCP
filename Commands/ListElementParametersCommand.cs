@@ -4,8 +4,6 @@ using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Npgsql;
-
 
 public class ListElementParametersCommand : ICommand
 {
@@ -22,15 +20,10 @@ public class ListElementParametersCommand : ICommand
             return response;
         }
         string conn = DbConfigHelper.GetConnectionString(input);
-        PostgresDb db = null;
-        NpgsqlConnection sharedConn = null;
-        NpgsqlTransaction tx = null;
+        BatchedPostgresDb db = null;
         if (!string.IsNullOrEmpty(conn))
         {
-            db = new PostgresDb(conn);
-            sharedConn = new NpgsqlConnection(conn);
-            sharedConn.Open();
-            tx = sharedConn.BeginTransaction();
+            db = new BatchedPostgresDb(conn);
         }
 
         // Precompute project parameter categories from ParameterBindings
@@ -105,7 +98,7 @@ public class ListElementParametersCommand : ICommand
 
             if (db != null)
             {
-                db.UpsertElement(
+            db.StageElement(
                     element.Id.IntegerValue,
                     ParseGuid(element.UniqueId),
                     element.Name,
@@ -113,9 +106,7 @@ public class ListElementParametersCommand : ICommand
                     typeName,
                     levelName,
                     doc.PathName,
-                    lastSaved,
-                    sharedConn,
-                    tx);
+                    lastSaved);
             }
 
             var paramData = new Dictionary<string, object>();
@@ -159,9 +150,8 @@ public class ListElementParametersCommand : ICommand
 
                 if (db != null)
                 {
-                    db.UpsertParameter(element.Id.IntegerValue, name, valueStr, isType,
-                        cats?.ToArray(), lastSaved,
-                        sharedConn, tx);
+                    db.StageParameter(element.Id.IntegerValue, name, valueStr, isType,
+                        cats?.ToArray(), lastSaved);
                 }
             }
             result[id.IntegerValue.ToString()] = paramData;
@@ -173,9 +163,8 @@ public class ListElementParametersCommand : ICommand
         if (db != null)
         {
             db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved,
-                null, null, sharedConn, tx);
-            tx.Commit();
-            sharedConn.Close();
+                null, null);
+            db.CommitAll();
         }
         return response;
     }

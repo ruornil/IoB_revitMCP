@@ -19,7 +19,7 @@ public class EnqueuePlanCommand : ICommand
             return response;
         }
 
-        var db = new PostgresDb(conn);
+        var db = new BatchedPostgresDb(conn);
         int id = db.EnqueuePlan(plan);
         response["status"] = "queued";
         response["job_id"] = id;

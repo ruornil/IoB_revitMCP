@@ -3,7 +3,6 @@ using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Npgsql;
 
 public class ListSchedulesCommand : ICommand
 {
@@ -29,10 +28,7 @@ public class ListSchedulesCommand : ICommand
                 return response;
             }
 
-            PostgresDb db = new PostgresDb(conn);
-            NpgsqlConnection sharedConn = new NpgsqlConnection(conn);
-            sharedConn.Open();
-            var tx = sharedConn.BeginTransaction();
+            BatchedPostgresDb db = new BatchedPostgresDb(conn);
             DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
             if (db.GetModelLastSaved(doc.PathName) == lastSaved)
             {
@@ -51,13 +47,11 @@ public class ListSchedulesCommand : ICommand
                 item["doc_id"] = doc.PathName;
                 scheds.Add(item);
 
-                db.UpsertSchedule(sch.Id.IntegerValue, Guid.Empty, sch.Name, item["category"].ToString(), doc.PathName, lastSaved,
-                    sharedConn, tx);
+                db.UpsertSchedule(sch.Id.IntegerValue, Guid.Empty, sch.Name, item["category"].ToString(), doc.PathName, lastSaved);
             }
             db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved,
-                null, null, sharedConn, tx);
-            tx.Commit();
-            sharedConn.Close();
+                null, null);
+            db.CommitAll();
             response["status"] = "success";
             response["schedules"] = scheds;
         }
