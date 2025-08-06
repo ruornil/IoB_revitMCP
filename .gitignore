@@ -17,3 +17,5 @@ ws-bridge/
 
 #ignore app config
 App.config
+
+llms-full.md

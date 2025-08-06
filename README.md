@@ -50,7 +50,7 @@ future.
 | `ListSheets`             | List all Revit sheets.                                                  |
 | `ListSchedules`          | List all schedules in the model.                                        |
 | `ListViews`              | List all Revit views.                                                   |
-| `CaptureToolState`       | Inspect active view and selection.                     |
+| `CaptureToolState`       | Inspect active view and selection.                                      |
 | `ModifyElements`         | Update types and/or parameters for elements.                            |
 | `NewSharedParameter`     | Create and bind a shared parameter to categories.                       |
 | `PlaceViewsOnSheet`      | Place view(s) on a sheet with layout options.                           |

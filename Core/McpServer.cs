@@ -16,7 +16,7 @@ public static class McpServer
     public static void Start()
     {
         _listener = new HttpListener();
-        _listener.Prefixes.Add("http://localhost:5005/mcp/");
+        _listener.Prefixes.Add("http://*:5005/mcp/");
         _listener.Start();
 
         _handler = new RequestHandler();
