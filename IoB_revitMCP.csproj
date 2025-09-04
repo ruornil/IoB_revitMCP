@@ -149,6 +149,7 @@
     <Compile Include="Commands\ListFamiliesAndTypesCommand.cs" />
     <Compile Include="Commands\ListCategoriesCommand.cs" />
     <Compile Include="Commands\ListViewsCommand.cs" />
+    <Compile Include="Commands\ListLinkedDocumentsCommand.cs" />
     <Compile Include="Commands\ListSheetsCommand.cs" />
     <Compile Include="Commands\ListSchedulesCommand.cs" />
     <Compile Include="Commands\CaptureToolStateCommand.cs" />

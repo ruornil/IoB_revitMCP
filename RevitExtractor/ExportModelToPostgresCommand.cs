@@ -72,7 +72,7 @@ namespace RevitExtractor
                         if (param.Definition == null) continue;
                         string val = ParamToString(param);
                         db.StageTypeParameter(type.Id.IntegerValue, param.Definition.Name, val,
-                            new[] { type.Category?.Name ?? string.Empty }, lastSaved);
+                            new[] { type.Category?.Name ?? string.Empty }, lastSaved, modelPath);
                     }
                 }
 
@@ -83,8 +83,8 @@ namespace RevitExtractor
                         if (param.Definition == null) continue;
                         string val = ParamToString(param);
                         db.StageParameter(element.Id.IntegerValue, param.Definition.Name, val,
-                            param.IsShared || param.IsReadOnly,
-                            new[] { element.Category?.Name ?? string.Empty }, lastSaved);
+                            false,
+                            new[] { element.Category?.Name ?? string.Empty }, lastSaved, modelPath);
                     }
                 }
             }

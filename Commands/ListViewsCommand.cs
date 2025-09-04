@@ -10,6 +10,7 @@ public class ListViewsCommand : ICommand
     {
         var response = new Dictionary<string, object>();
         var doc = app.ActiveUIDocument?.Document;
+        bool includeLinked = input.TryGetValue("include_linked", out var inc) && inc.Equals("true", StringComparison.OrdinalIgnoreCase);
         if (doc == null)
         {
             response["status"] = "error";
@@ -81,6 +82,42 @@ public class ListViewsCommand : ICommand
                 db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved,
                     null, null);
                 db.CommitAll();
+            }
+
+            // Optionally include views from loaded linked documents (read-only; no DB upsert to avoid collisions)
+            if (includeLinked)
+            {
+                var links = new FilteredElementCollector(doc)
+                    .OfClass(typeof(RevitLinkInstance))
+                    .Cast<RevitLinkInstance>();
+                foreach (var link in links)
+                {
+                    Document linkDoc = null;
+                    try { linkDoc = link.GetLinkDocument(); } catch { linkDoc = null; }
+                    if (linkDoc == null) continue;
+
+                    var linkViews = new FilteredElementCollector(linkDoc)
+                        .OfClass(typeof(View))
+                        .Cast<View>()
+                        .Where(v => !v.IsTemplate);
+
+                    foreach (var v in linkViews)
+                    {
+                        var item = new Dictionary<string, object>();
+                        item["id"] = v.Id.IntegerValue;
+                        item["guid"] = v.UniqueId;
+                        item["name"] = v.Name;
+                        item["view_type"] = v.ViewType.ToString();
+                        item["scale"] = v.Scale;
+                        item["discipline"] = "Unknown";
+                        item["detail_level"] = v.DetailLevel.ToString();
+                        item["associated_sheet_id"] = null;
+                        item["doc_id"] = linkDoc.PathName;
+                        item["source"] = "link";
+                        item["link_instance_id"] = link.Id.IntegerValue;
+                        result.Add(item);
+                    }
+                }
             }
 
             ModelCache.Set(doc.PathName + "/views", lastSaved, result);

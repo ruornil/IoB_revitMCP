@@ -14,6 +14,7 @@ public class ListFamiliesAndTypesCommand : ICommand
         var doc = app.ActiveUIDocument.Document;
         var response = new Dictionary<string, object>();
         var result = new List<Dictionary<string, object>>();
+        bool includeLinked = input.TryGetValue("include_linked", out var inc) && inc.Equals("true", StringComparison.OrdinalIgnoreCase);
 
         string conn = DbConfigHelper.GetConnectionString(input);
         BatchedPostgresDb db = null;
@@ -51,7 +52,7 @@ public class ListFamiliesAndTypesCommand : ICommand
                 }
             }
 
-            string cacheKey = doc.PathName + "/families-" + filterType.Name;
+            string cacheKey = doc.PathName + "/families-" + filterType.Name + (includeLinked ? "-withlinks" : "");
             if (ModelCache.TryGet(cacheKey, lastSaved, out List<Dictionary<string, object>> cached))
             {
                 response["status"] = "success";
@@ -80,6 +81,43 @@ public class ListFamiliesAndTypesCommand : ICommand
                     if (db != null)
                     {
                         db.UpsertFamily(type.FamilyName, type.Name, type.Category?.Name ?? string.Empty, type.UniqueId, doc.PathName, lastSaved);
+                    }
+                }
+            }
+
+            // Optionally include linked documents (read-only; no DB upsert to avoid collisions)
+            if (includeLinked)
+            {
+                var links = new FilteredElementCollector(doc)
+                    .OfClass(typeof(RevitLinkInstance))
+                    .Cast<RevitLinkInstance>();
+
+                foreach (var link in links)
+                {
+                    Document linkDoc = null;
+                    try { linkDoc = link.GetLinkDocument(); } catch { linkDoc = null; }
+                    if (linkDoc == null) continue;
+
+                    var linkTypes = new FilteredElementCollector(linkDoc)
+                        .WhereElementIsElementType()
+                        .OfClass(filterType)
+                        .Cast<ElementType>();
+
+                    foreach (var type in linkTypes)
+                    {
+                        if (type.FamilyName != null && type.Name != null)
+                        {
+                            var item = new Dictionary<string, object>();
+                            item["family"] = type.FamilyName;
+                            item["type"] = type.Name;
+                            item["id"] = type.Id.IntegerValue.ToString();
+                            item["category"] = type.Category?.Name ?? string.Empty;
+                            item["guid"] = type.UniqueId;
+                            item["doc_id"] = linkDoc.PathName;
+                            item["source"] = "link";
+                            item["link_instance_id"] = link.Id.IntegerValue;
+                            result.Add(item);
+                        }
                     }
                 }
             }

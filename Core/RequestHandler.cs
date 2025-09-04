@@ -32,6 +32,7 @@ public class RequestHandler : IExternalEventHandler
         { "ListSchedules", new ListSchedulesCommand()},
         { "ListSheets", new ListSheetsCommand()},
         { "ListViews", new ListViewsCommand()},
+        { "ListLinkedDocuments", new ListLinkedDocumentsCommand()},
         { "CaptureToolState", new CaptureToolStateCommand()},
         { "ModifyElements", new ModifyElementsCommand() },
         { "NewSharedParameter", new NewSharedParameterCommand() },

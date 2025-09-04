@@ -151,7 +151,7 @@ public class ListElementParametersCommand : ICommand
                 if (db != null)
                 {
                     db.StageParameter(element.Id.IntegerValue, name, valueStr, isType,
-                        cats?.ToArray(), lastSaved);
+                        cats?.ToArray(), lastSaved, doc.PathName);
                 }
             }
             result[id.IntegerValue.ToString()] = paramData;

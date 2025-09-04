@@ -10,6 +10,7 @@ public class ListCategoriesCommand : ICommand
     {
         var response = new Dictionary<string, object>();
         var doc = app.ActiveUIDocument?.Document;
+        bool includeLinked = input.TryGetValue("include_linked", out var inc) && inc.Equals("true", StringComparison.OrdinalIgnoreCase);
         if (doc == null)
         {
             response["status"] = "error";
@@ -44,9 +45,37 @@ public class ListCategoriesCommand : ICommand
                 item["group"] = cat.CategoryType.ToString();
                 item["guid"] = cat.Id.IntegerValue.ToString();
                 item["description"] = string.Empty;
+                item["doc_id"] = doc.PathName;
                 categories.Add(item);
 
                 db.UpsertCategory(cat.Id.IntegerValue.ToString(), cat.Name, cat.CategoryType.ToString(), item["description"].ToString(), Guid.Empty, lastSaved);
+            }
+
+            if (includeLinked)
+            {
+                var links = new FilteredElementCollector(doc)
+                    .OfClass(typeof(RevitLinkInstance))
+                    .Cast<RevitLinkInstance>();
+                foreach (var link in links)
+                {
+                    Document linkDoc = null;
+                    try { linkDoc = link.GetLinkDocument(); } catch { linkDoc = null; }
+                    if (linkDoc == null) continue;
+
+                    foreach (Category cat in linkDoc.Settings.Categories)
+                    {
+                        var item = new Dictionary<string, object>();
+                        item["enum"] = cat.Id.IntegerValue;
+                        item["name"] = cat.Name;
+                        item["group"] = cat.CategoryType.ToString();
+                        item["guid"] = cat.Id.IntegerValue.ToString();
+                        item["description"] = string.Empty;
+                        item["doc_id"] = linkDoc.PathName;
+                        item["source"] = "link";
+                        item["link_instance_id"] = link.Id.IntegerValue;
+                        categories.Add(item);
+                    }
+                }
             }
             db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved,
                 null, null);

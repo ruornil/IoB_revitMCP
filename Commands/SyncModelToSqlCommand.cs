@@ -153,6 +153,87 @@ public class SyncModelToSqlCommand : ICommand
             db.StageElement(element.Id.IntegerValue, ParseGuid(element.UniqueId), element.Name, element.Category?.Name ?? string.Empty, typeName, levelName, doc.PathName, lastSaved);
             count++;
         }
+        // Optional: sync link instances metadata if requested
+        bool syncLinks = input.TryGetValue("sync_links", out var syncLinksVal) && syncLinksVal.Equals("true", StringComparison.OrdinalIgnoreCase);
+        if (syncLinks)
+        {
+            try
+            {
+                var instances = new FilteredElementCollector(doc)
+                    .OfClass(typeof(RevitLinkInstance))
+                    .Cast<RevitLinkInstance>();
+                foreach (var inst in instances)
+                {
+                    string hostDocId = doc.PathName;
+                    int instanceId = inst.Id.IntegerValue;
+
+                    // Try to resolve link document id (path)
+                    string linkDocId = string.Empty;
+                    Document linkDoc = null;
+                    try { linkDoc = inst.GetLinkDocument(); } catch { linkDoc = null; }
+                    if (linkDoc != null && !string.IsNullOrWhiteSpace(linkDoc.PathName))
+                        linkDocId = linkDoc.PathName;
+                    else
+                    {
+                        // fallback to type path if available
+                        try
+                        {
+                            var linkType = doc.GetElement(inst.GetTypeId()) as RevitLinkType;
+                            var path = linkType?.PathName;
+                            if (string.IsNullOrWhiteSpace(path))
+                            {
+                                var ext = linkType?.GetExternalFileReference();
+                                var mp = ext?.GetPath();
+                                if (mp != null)
+                                    path = ModelPathUtils.ConvertModelPathToUserVisiblePath(mp);
+                            }
+                            linkDocId = path ?? string.Empty;
+                        }
+                        catch { linkDocId = string.Empty; }
+                    }
+
+                    double? ox = null, oy = null, oz = null;
+                    double? bxx = null, bxy = null, bxz = null;
+                    double? byx = null, byy = null, byz = null;
+                    double? bzx = null, bzy = null, bzz = null;
+                    double? rotz = null, atn = null;
+                    try
+                    {
+                        Transform t = inst.GetTotalTransform();
+                        ox = t.Origin.X; oy = t.Origin.Y; oz = t.Origin.Z;
+                        bxx = t.BasisX.X; bxy = t.BasisX.Y; bxz = t.BasisX.Z;
+                        byx = t.BasisY.X; byy = t.BasisY.Y; byz = t.BasisY.Z;
+                        bzx = t.BasisZ.X; bzy = t.BasisZ.Y; bzz = t.BasisZ.Z;
+                        rotz = Math.Atan2(t.BasisX.Y, t.BasisX.X);
+                    }
+                    catch { }
+                    if (linkDoc != null)
+                    {
+                        try
+                        {
+                            var loc = linkDoc.ActiveProjectLocation;
+                            var pp = loc?.GetProjectPosition(XYZ.Zero);
+                            if (pp != null) atn = pp.Angle;
+                        }
+                        catch { }
+                    }
+
+                    // Write link instance row
+                    var pg = new PostgresDb(conn);
+                    pg.UpsertLinkInstance(hostDocId, instanceId, linkDocId,
+                        ox, oy, oz,
+                        bxx, bxy, bxz,
+                        byx, byy, byz,
+                        bzx, bzy, bzz,
+                        rotz, atn, lastSaved);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Non-fatal: include error in response
+                response["sync_links_error"] = ex.Message;
+            }
+        }
         db.CommitAll();
         response["status"] = "success";
         response["updated"] = count;

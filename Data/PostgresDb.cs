@@ -65,7 +65,19 @@ public class PostgresDb
         string typeName, string level, string docId, DateTime lastSaved,
         NpgsqlConnection conn = null, NpgsqlTransaction tx = null)
     {
-        string sql = @"INSERT INTO revit_elements
+        string sqlV2 = @"INSERT INTO revit_elements
+            (id, guid, name, category, type_name, level, doc_id, last_saved)
+            VALUES (@id, @guid, @name, @category, @type_name, @level, @doc_id, @last_saved)
+            ON CONFLICT (doc_id, id) DO UPDATE SET
+                guid = EXCLUDED.guid,
+                name = EXCLUDED.name,
+                category = EXCLUDED.category,
+                type_name = EXCLUDED.type_name,
+                level = EXCLUDED.level,
+                doc_id = EXCLUDED.doc_id,
+                last_saved = EXCLUDED.last_saved
+            WHERE EXCLUDED.last_saved > revit_elements.last_saved";
+        string sqlV1 = @"INSERT INTO revit_elements
             (id, guid, name, category, type_name, level, doc_id, last_saved)
             VALUES (@id, @guid, @name, @category, @type_name, @level, @doc_id, @last_saved)
             ON CONFLICT (id) DO UPDATE SET
@@ -89,17 +101,36 @@ public class PostgresDb
             new NpgsqlParameter("@last_saved", lastSaved)
         };
 
-        if (conn == null)
-            ExecuteNonQuery(sql, args);
-        else
-            ExecuteNonQuery(conn, tx, sql, args);
+        try
+        {
+            if (conn == null)
+                ExecuteNonQuery(sqlV2, args);
+            else
+                ExecuteNonQuery(conn, tx, sqlV2, args);
+        }
+        catch (PostgresException)
+        {
+            if (conn == null)
+                ExecuteNonQuery(sqlV1, args);
+            else
+                ExecuteNonQuery(conn, tx, sqlV1, args);
+        }
     }
 
     public void UpsertParameter(int elementId, string name, string value, bool isType,
-        string[] applicable, DateTime lastSaved,
+        string[] applicable, DateTime lastSaved, string docId,
         NpgsqlConnection conn = null, NpgsqlTransaction tx = null)
     {
-        string sql = @"INSERT INTO revit_parameters
+        string sqlV2 = @"INSERT INTO revit_parameters
+            (doc_id, element_id, param_name, param_value, is_type, applicable_categories, last_saved)
+            VALUES (@doc, @elid, @name, @value, @is_type, @categories, @last_saved)
+            ON CONFLICT (doc_id, element_id, param_name) DO UPDATE SET
+                param_value = EXCLUDED.param_value,
+                is_type = EXCLUDED.is_type,
+                applicable_categories = EXCLUDED.applicable_categories,
+                last_saved = EXCLUDED.last_saved
+            WHERE EXCLUDED.last_saved > revit_parameters.last_saved";
+        string sqlV1 = @"INSERT INTO revit_parameters
             (element_id, param_name, param_value, is_type, applicable_categories, last_saved)
             VALUES (@elid, @name, @value, @is_type, @categories, @last_saved)
             ON CONFLICT (element_id, param_name) DO UPDATE SET
@@ -115,13 +146,33 @@ public class PostgresDb
             new NpgsqlParameter("@value", value ?? (object)DBNull.Value),
             new NpgsqlParameter("@is_type", isType),
             new NpgsqlParameter("@categories", applicable ?? (object)DBNull.Value),
+            new NpgsqlParameter("@doc", docId ?? (object)DBNull.Value),
             new NpgsqlParameter("@last_saved", lastSaved)
         };
 
-        if (conn == null)
-            ExecuteNonQuery(sql, args);
-        else
-            ExecuteNonQuery(conn, tx, sql, args);
+        try
+        {
+            if (conn == null)
+                ExecuteNonQuery(sqlV2, args);
+            else
+                ExecuteNonQuery(conn, tx, sqlV2, args);
+        }
+        catch (PostgresException)
+        {
+            // fallback to legacy schema without doc_id and composite unique
+            var legacyArgs = new[] {
+                new NpgsqlParameter("@elid", elementId),
+                new NpgsqlParameter("@name", name),
+                new NpgsqlParameter("@value", value ?? (object)DBNull.Value),
+                new NpgsqlParameter("@is_type", isType),
+                new NpgsqlParameter("@categories", applicable ?? (object)DBNull.Value),
+                new NpgsqlParameter("@last_saved", lastSaved)
+            };
+            if (conn == null)
+                ExecuteNonQuery(sqlV1, legacyArgs);
+            else
+                ExecuteNonQuery(conn, tx, sqlV1, legacyArgs);
+        }
     }
 
     public void UpsertCategory(string enumVal, string name, string group, string description, Guid guid, DateTime lastSaved,
@@ -254,7 +305,15 @@ public class PostgresDb
     public void UpsertFamily(string name, string familyType, string category, string guid, string docId, DateTime lastSaved,
         NpgsqlConnection conn = null, NpgsqlTransaction tx = null)
     {
-        string sql = @"INSERT INTO revit_families
+        string sqlV2 = @"INSERT INTO revit_families
+            (name, family_type, category, guid, doc_id, last_saved)
+            VALUES (@name, @type, @cat, @guid, @doc, @last_saved)
+            ON CONFLICT (doc_id, name, family_type, category) DO UPDATE SET
+                guid = EXCLUDED.guid,
+                doc_id = EXCLUDED.doc_id,
+                last_saved = EXCLUDED.last_saved
+            WHERE EXCLUDED.last_saved > revit_families.last_saved";
+        string sqlV1 = @"INSERT INTO revit_families
             (name, family_type, category, guid, doc_id, last_saved)
             VALUES (@name, @type, @cat, @guid, @doc, @last_saved)
             ON CONFLICT (name, family_type, category) DO UPDATE SET
@@ -272,17 +331,38 @@ public class PostgresDb
             new NpgsqlParameter("@last_saved", lastSaved)
         };
 
-        if (conn == null)
-            ExecuteNonQuery(sql, args);
-        else
-            ExecuteNonQuery(conn, tx, sql, args);
+        try
+        {
+            if (conn == null)
+                ExecuteNonQuery(sqlV2, args);
+            else
+                ExecuteNonQuery(conn, tx, sqlV2, args);
+        }
+        catch (PostgresException)
+        {
+            if (conn == null)
+                ExecuteNonQuery(sqlV1, args);
+            else
+                ExecuteNonQuery(conn, tx, sqlV1, args);
+        }
     }
 
     public void UpsertElementType(int id, Guid guid, string family, string typeName,
         string category, string docId, DateTime lastSaved,
         NpgsqlConnection conn = null, NpgsqlTransaction tx = null)
     {
-        string sql = @"INSERT INTO revit_elementTypes
+        string sqlV2 = @"INSERT INTO revit_elementTypes
+            (id, guid, family, type_name, category, doc_id, last_saved)
+            VALUES (@id, @guid, @family, @type_name, @category, @doc_id, @last_saved)
+            ON CONFLICT (doc_id, id) DO UPDATE SET
+                guid = EXCLUDED.guid,
+                family = EXCLUDED.family,
+                type_name = EXCLUDED.type_name,
+                category = EXCLUDED.category,
+                doc_id = EXCLUDED.doc_id,
+                last_saved = EXCLUDED.last_saved
+            WHERE EXCLUDED.last_saved > revit_elementTypes.last_saved";
+        string sqlV1 = @"INSERT INTO revit_elementTypes
             (id, guid, family, type_name, category, doc_id, last_saved)
             VALUES (@id, @guid, @family, @type_name, @category, @doc_id, @last_saved)
             ON CONFLICT (id) DO UPDATE SET
@@ -302,6 +382,119 @@ public class PostgresDb
             new NpgsqlParameter("@category", category ?? (object)DBNull.Value),
             new NpgsqlParameter("@doc_id", docId ?? (object)DBNull.Value),
             new NpgsqlParameter("@last_saved", lastSaved)
+        };
+
+        try
+        {
+            if (conn == null)
+                ExecuteNonQuery(sqlV2, args);
+            else
+                ExecuteNonQuery(conn, tx, sqlV2, args);
+        }
+        catch (PostgresException)
+        {
+            if (conn == null)
+                ExecuteNonQuery(sqlV1, args);
+            else
+                ExecuteNonQuery(conn, tx, sqlV1, args);
+        }
+    }
+
+    public void UpsertLinkInstance(
+        string hostDocId,
+        int instanceId,
+        string linkDocId,
+        double? originX,
+        double? originY,
+        double? originZ,
+        double? bxX,
+        double? bxY,
+        double? bxZ,
+        double? byX,
+        double? byY,
+        double? byZ,
+        double? bzX,
+        double? bzY,
+        double? bzZ,
+        double? rotationZRadians,
+        double? angleToTrueNorthRadians,
+        DateTime lastSaved,
+        NpgsqlConnection conn = null,
+        NpgsqlTransaction tx = null)
+    {
+        string sql = @"CREATE TABLE IF NOT EXISTS revit_link_instances (
+  host_doc_id TEXT NOT NULL,
+  instance_id INTEGER PRIMARY KEY,
+  link_doc_id TEXT NOT NULL,
+  origin_x DOUBLE PRECISION,
+  origin_y DOUBLE PRECISION,
+  origin_z DOUBLE PRECISION,
+  basisx_x DOUBLE PRECISION,
+  basisx_y DOUBLE PRECISION,
+  basisx_z DOUBLE PRECISION,
+  basisy_x DOUBLE PRECISION,
+  basisy_y DOUBLE PRECISION,
+  basisy_z DOUBLE PRECISION,
+  basisz_x DOUBLE PRECISION,
+  basisz_y DOUBLE PRECISION,
+  basisz_z DOUBLE PRECISION,
+  rotation_z_radians DOUBLE PRECISION,
+  angle_to_true_north_radians DOUBLE PRECISION,
+  last_saved TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+INSERT INTO revit_link_instances (
+  host_doc_id, instance_id, link_doc_id,
+  origin_x, origin_y, origin_z,
+  basisx_x, basisx_y, basisx_z,
+  basisy_x, basisy_y, basisy_z,
+  basisz_x, basisz_y, basisz_z,
+  rotation_z_radians, angle_to_true_north_radians, last_saved)
+VALUES (
+  @host, @iid, @link,
+  @ox, @oy, @oz,
+  @bxx, @bxy, @bxz,
+  @byx, @byy, @byz,
+  @bzx, @bzy, @bzz,
+  @rotz, @atn, @ts)
+ON CONFLICT (instance_id) DO UPDATE SET
+  host_doc_id = EXCLUDED.host_doc_id,
+  link_doc_id = EXCLUDED.link_doc_id,
+  origin_x = EXCLUDED.origin_x,
+  origin_y = EXCLUDED.origin_y,
+  origin_z = EXCLUDED.origin_z,
+  basisx_x = EXCLUDED.basisx_x,
+  basisx_y = EXCLUDED.basisx_y,
+  basisx_z = EXCLUDED.basisx_z,
+  basisy_x = EXCLUDED.basisy_x,
+  basisy_y = EXCLUDED.basisy_y,
+  basisy_z = EXCLUDED.basisy_z,
+  basisz_x = EXCLUDED.basisz_x,
+  basisz_y = EXCLUDED.basisz_y,
+  basisz_z = EXCLUDED.basisz_z,
+  rotation_z_radians = EXCLUDED.rotation_z_radians,
+  angle_to_true_north_radians = EXCLUDED.angle_to_true_north_radians,
+  last_saved = EXCLUDED.last_saved";
+
+        var args = new[]
+        {
+            new NpgsqlParameter("@host", hostDocId ?? (object)DBNull.Value),
+            new NpgsqlParameter("@iid", instanceId),
+            new NpgsqlParameter("@link", linkDocId ?? (object)DBNull.Value),
+            new NpgsqlParameter("@ox", (object?)originX ?? DBNull.Value),
+            new NpgsqlParameter("@oy", (object?)originY ?? DBNull.Value),
+            new NpgsqlParameter("@oz", (object?)originZ ?? DBNull.Value),
+            new NpgsqlParameter("@bxx", (object?)bxX ?? DBNull.Value),
+            new NpgsqlParameter("@bxy", (object?)bxY ?? DBNull.Value),
+            new NpgsqlParameter("@bxz", (object?)bxZ ?? DBNull.Value),
+            new NpgsqlParameter("@byx", (object?)byX ?? DBNull.Value),
+            new NpgsqlParameter("@byy", (object?)byY ?? DBNull.Value),
+            new NpgsqlParameter("@byz", (object?)byZ ?? DBNull.Value),
+            new NpgsqlParameter("@bzx", (object?)bzX ?? DBNull.Value),
+            new NpgsqlParameter("@bzy", (object?)bzY ?? DBNull.Value),
+            new NpgsqlParameter("@bzz", (object?)bzZ ?? DBNull.Value),
+            new NpgsqlParameter("@rotz", (object?)rotationZRadians ?? DBNull.Value),
+            new NpgsqlParameter("@atn", (object?)angleToTrueNorthRadians ?? DBNull.Value),
+            new NpgsqlParameter("@ts", lastSaved)
         };
 
         if (conn == null)

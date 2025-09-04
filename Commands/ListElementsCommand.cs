@@ -12,6 +12,7 @@ public class ListElementsCommand : ICommand
         var doc = app.ActiveUIDocument.Document;
         var response = new Dictionary<string, object>();
         string categoryName = input.ContainsKey("category") ? input["category"] : "Walls";
+        bool includeLinked = input.TryGetValue("include_linked", out var inc) && inc.Equals("true", StringComparison.OrdinalIgnoreCase);
 
         string conn = DbConfigHelper.GetConnectionString(input);
         BatchedPostgresDb db = null;
@@ -22,7 +23,8 @@ public class ListElementsCommand : ICommand
 
         DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
 
-        if (ModelCache.TryGet(doc.PathName + "/elements-" + categoryName, lastSaved,
+        string cacheKey = doc.PathName + "/elements-" + categoryName + (includeLinked ? "-withlinks" : "");
+        if (ModelCache.TryGet(cacheKey, lastSaved,
                 out List<Dictionary<string, object>> cached))
         {
             response["status"] = "success";
@@ -61,6 +63,36 @@ public class ListElementsCommand : ICommand
             }
         }
 
+        // Optionally include loaded linked documents (read-only). We do NOT upsert linked elements to DB to avoid collisions
+        // across multiple link instances and documents in current schema.
+        if (includeLinked)
+        {
+            var links = new FilteredElementCollector(doc)
+                .OfClass(typeof(RevitLinkInstance))
+                .Cast<RevitLinkInstance>();
+            foreach (var link in links)
+            {
+                Document linkDoc = null;
+                try { linkDoc = link.GetLinkDocument(); } catch { linkDoc = null; }
+                if (linkDoc == null) continue;
+
+                var linked = new FilteredElementCollector(linkDoc)
+                    .OfCategory(CategoryUtils.ParseBuiltInCategory(categoryName))
+                    .WhereElementIsNotElementType();
+
+                foreach (var e in linked)
+                {
+                    var item = new Dictionary<string, object>();
+                    item["id"] = e.Id.IntegerValue;
+                    item["name"] = e.Name;
+                    item["doc_id"] = linkDoc.PathName;
+                    item["source"] = "link";
+                    item["link_instance_id"] = link.Id.IntegerValue;
+                    elements.Add(item);
+                }
+            }
+        }
+
         if (db != null)
         {
             db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved,
@@ -68,7 +100,7 @@ public class ListElementsCommand : ICommand
             db.CommitAll();
         }
 
-        ModelCache.Set(doc.PathName + "/elements-" + categoryName, lastSaved, elements);
+        ModelCache.Set(cacheKey, lastSaved, elements);
         response["status"] = "success";
         response["elements"] = elements;
         return response;

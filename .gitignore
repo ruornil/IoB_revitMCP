@@ -17,5 +17,9 @@ ws-bridge/
 
 #ignore app config
 App.config
+revit-conn.txt
 
 llms-full.md
+readme-backup.md
+
+/AIAgentWorkflows
