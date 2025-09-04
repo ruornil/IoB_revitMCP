@@ -422,7 +422,83 @@ public class PostgresDb
         NpgsqlConnection conn = null,
         NpgsqlTransaction tx = null)
     {
-        string sql = @"CREATE TABLE IF NOT EXISTS revit_link_instances (
+        string sqlV2 = @"CREATE TABLE IF NOT EXISTS revit_link_instances (
+  host_doc_id TEXT NOT NULL,
+  instance_id INTEGER NOT NULL,
+  link_doc_id TEXT NOT NULL,
+  origin_x DOUBLE PRECISION,
+  origin_y DOUBLE PRECISION,
+  origin_z DOUBLE PRECISION,
+  basisx_x DOUBLE PRECISION,
+  basisx_y DOUBLE PRECISION,
+  basisx_z DOUBLE PRECISION,
+  basisy_x DOUBLE PRECISION,
+  basisy_y DOUBLE PRECISION,
+  basisy_z DOUBLE PRECISION,
+  basisz_x DOUBLE PRECISION,
+  basisz_y DOUBLE PRECISION,
+  basisz_z DOUBLE PRECISION,
+  rotation_z_radians DOUBLE PRECISION,
+  angle_to_true_north_radians DOUBLE PRECISION,
+  last_saved TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT pk_revit_link_instances PRIMARY KEY (host_doc_id, instance_id)
+);
+INSERT INTO revit_link_instances (
+  host_doc_id, instance_id, link_doc_id,
+  origin_x, origin_y, origin_z,
+  basisx_x, basisx_y, basisx_z,
+  basisy_x, basisy_y, basisy_z,
+  basisz_x, basisz_y, basisz_z,
+  rotation_z_radians, angle_to_true_north_radians, last_saved)
+VALUES (
+  @host, @iid, @link,
+  @ox, @oy, @oz,
+  @bxx, @bxy, @bxz,
+  @byx, @byy, @byz,
+  @bzx, @bzy, @bzz,
+  @rotz, @atn, @ts)
+ON CONFLICT (host_doc_id, instance_id) DO UPDATE SET
+  host_doc_id = EXCLUDED.host_doc_id,
+  link_doc_id = EXCLUDED.link_doc_id,
+  origin_x = EXCLUDED.origin_x,
+  origin_y = EXCLUDED.origin_y,
+  origin_z = EXCLUDED.origin_z,
+  basisx_x = EXCLUDED.basisx_x,
+  basisx_y = EXCLUDED.basisx_y,
+  basisx_z = EXCLUDED.basisx_z,
+  basisy_x = EXCLUDED.basisy_x,
+  basisy_y = EXCLUDED.basisy_y,
+  basisy_z = EXCLUDED.basisy_z,
+  basisz_x = EXCLUDED.basisz_x,
+  basisz_y = EXCLUDED.basisz_y,
+  basisz_z = EXCLUDED.basisz_z,
+  rotation_z_radians = EXCLUDED.rotation_z_radians,
+  angle_to_true_north_radians = EXCLUDED.angle_to_true_north_radians,
+  last_saved = EXCLUDED.last_saved";
+
+        var args = new[]
+        {
+            new NpgsqlParameter("@host", hostDocId ?? (object)DBNull.Value),
+            new NpgsqlParameter("@iid", instanceId),
+            new NpgsqlParameter("@link", linkDocId ?? (object)DBNull.Value),
+            new NpgsqlParameter("@ox", originX.HasValue ? (object)originX.Value : DBNull.Value),
+            new NpgsqlParameter("@oy", originY.HasValue ? (object)originY.Value : DBNull.Value),
+            new NpgsqlParameter("@oz", originZ.HasValue ? (object)originZ.Value : DBNull.Value),
+            new NpgsqlParameter("@bxx", bxX.HasValue ? (object)bxX.Value : DBNull.Value),
+            new NpgsqlParameter("@bxy", bxY.HasValue ? (object)bxY.Value : DBNull.Value),
+            new NpgsqlParameter("@bxz", bxZ.HasValue ? (object)bxZ.Value : DBNull.Value),
+            new NpgsqlParameter("@byx", byX.HasValue ? (object)byX.Value : DBNull.Value),
+            new NpgsqlParameter("@byy", byY.HasValue ? (object)byY.Value : DBNull.Value),
+            new NpgsqlParameter("@byz", byZ.HasValue ? (object)byZ.Value : DBNull.Value),
+            new NpgsqlParameter("@bzx", bzX.HasValue ? (object)bzX.Value : DBNull.Value),
+            new NpgsqlParameter("@bzy", bzY.HasValue ? (object)bzY.Value : DBNull.Value),
+            new NpgsqlParameter("@bzz", bzZ.HasValue ? (object)bzZ.Value : DBNull.Value),
+            new NpgsqlParameter("@rotz", rotationZRadians.HasValue ? (object)rotationZRadians.Value : DBNull.Value),
+            new NpgsqlParameter("@atn", angleToTrueNorthRadians.HasValue ? (object)angleToTrueNorthRadians.Value : DBNull.Value),
+            new NpgsqlParameter("@ts", lastSaved)
+        };
+
+        string sqlV1 = @"CREATE TABLE IF NOT EXISTS revit_link_instances (
   host_doc_id TEXT NOT NULL,
   instance_id INTEGER PRIMARY KEY,
   link_doc_id TEXT NOT NULL,
@@ -475,25 +551,74 @@ ON CONFLICT (instance_id) DO UPDATE SET
   angle_to_true_north_radians = EXCLUDED.angle_to_true_north_radians,
   last_saved = EXCLUDED.last_saved";
 
+        try
+        {
+            if (conn == null)
+                ExecuteNonQuery(sqlV2, args);
+            else
+                ExecuteNonQuery(conn, tx, sqlV2, args);
+        }
+        catch (PostgresException)
+        {
+            if (conn == null)
+                ExecuteNonQuery(sqlV1, args);
+            else
+                ExecuteNonQuery(conn, tx, sqlV1, args);
+        }
+    }
+
+    public void UpsertLinkedElement(
+        string hostDocId,
+        int linkInstanceId,
+        string linkDocId,
+        int id,
+        Guid guid,
+        string name,
+        string category,
+        string typeName,
+        string level,
+        DateTime lastSaved,
+        NpgsqlConnection conn = null,
+        NpgsqlTransaction tx = null)
+    {
+        string sql = @"CREATE TABLE IF NOT EXISTS revit_linked_elements (
+  host_doc_id TEXT NOT NULL,
+  link_instance_id INTEGER NOT NULL,
+  link_doc_id TEXT NOT NULL,
+  id INTEGER NOT NULL,
+  guid UUID,
+  name TEXT,
+  category TEXT,
+  type_name TEXT,
+  level TEXT,
+  last_saved TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT pk_revit_linked_elements PRIMARY KEY (host_doc_id, link_instance_id, id)
+);
+INSERT INTO revit_linked_elements (
+  host_doc_id, link_instance_id, link_doc_id, id, guid, name, category, type_name, level, last_saved)
+VALUES (
+  @host, @iid, @link, @id, @guid, @name, @cat, @type, @level, @ts)
+ON CONFLICT (host_doc_id, link_instance_id, id) DO UPDATE SET
+  link_doc_id = EXCLUDED.link_doc_id,
+  guid = EXCLUDED.guid,
+  name = EXCLUDED.name,
+  category = EXCLUDED.category,
+  type_name = EXCLUDED.type_name,
+  level = EXCLUDED.level,
+  last_saved = EXCLUDED.last_saved
+  WHERE EXCLUDED.last_saved > revit_linked_elements.last_saved";
+
         var args = new[]
         {
             new NpgsqlParameter("@host", hostDocId ?? (object)DBNull.Value),
-            new NpgsqlParameter("@iid", instanceId),
+            new NpgsqlParameter("@iid", linkInstanceId),
             new NpgsqlParameter("@link", linkDocId ?? (object)DBNull.Value),
-            new NpgsqlParameter("@ox", (object?)originX ?? DBNull.Value),
-            new NpgsqlParameter("@oy", (object?)originY ?? DBNull.Value),
-            new NpgsqlParameter("@oz", (object?)originZ ?? DBNull.Value),
-            new NpgsqlParameter("@bxx", (object?)bxX ?? DBNull.Value),
-            new NpgsqlParameter("@bxy", (object?)bxY ?? DBNull.Value),
-            new NpgsqlParameter("@bxz", (object?)bxZ ?? DBNull.Value),
-            new NpgsqlParameter("@byx", (object?)byX ?? DBNull.Value),
-            new NpgsqlParameter("@byy", (object?)byY ?? DBNull.Value),
-            new NpgsqlParameter("@byz", (object?)byZ ?? DBNull.Value),
-            new NpgsqlParameter("@bzx", (object?)bzX ?? DBNull.Value),
-            new NpgsqlParameter("@bzy", (object?)bzY ?? DBNull.Value),
-            new NpgsqlParameter("@bzz", (object?)bzZ ?? DBNull.Value),
-            new NpgsqlParameter("@rotz", (object?)rotationZRadians ?? DBNull.Value),
-            new NpgsqlParameter("@atn", (object?)angleToTrueNorthRadians ?? DBNull.Value),
+            new NpgsqlParameter("@id", id),
+            new NpgsqlParameter("@guid", guid),
+            new NpgsqlParameter("@name", name ?? (object)DBNull.Value),
+            new NpgsqlParameter("@cat", category ?? (object)DBNull.Value),
+            new NpgsqlParameter("@type", typeName ?? (object)DBNull.Value),
+            new NpgsqlParameter("@level", level ?? (object)DBNull.Value),
             new NpgsqlParameter("@ts", lastSaved)
         };
 
@@ -540,6 +665,106 @@ ON CONFLICT (instance_id) DO UPDATE SET
             ExecuteNonQuery(sql, args.ToArray());
         else
             ExecuteNonQuery(conn, tx, sql, args.ToArray());
+    }
+
+    public void UpsertLinkedModelInfo(string hostDocId, string linkDocId, string modelName, Guid guid, DateTime lastSaved, string projectInfo = null, string projectParameters = null,
+        NpgsqlConnection conn = null, NpgsqlTransaction tx = null)
+    {
+        string sql = @"CREATE TABLE IF NOT EXISTS model_info_linked (
+  host_doc_id TEXT NOT NULL,
+  link_doc_id TEXT NOT NULL,
+  model_name TEXT,
+  guid UUID,
+  last_saved TIMESTAMP,
+  project_info JSONB,
+  project_parameters JSONB,
+  CONSTRAINT pk_model_info_linked PRIMARY KEY (host_doc_id, link_doc_id)
+);
+INSERT INTO model_info_linked (host_doc_id, link_doc_id, model_name, guid, last_saved, project_info, project_parameters)
+VALUES (@host, @link, @name, @guid, @last_saved, @info, @params)
+ON CONFLICT (host_doc_id, link_doc_id) DO UPDATE SET
+  model_name = EXCLUDED.model_name,
+  guid = EXCLUDED.guid,
+  last_saved = EXCLUDED.last_saved,
+  project_info = EXCLUDED.project_info,
+  project_parameters = EXCLUDED.project_parameters
+WHERE EXCLUDED.last_saved > model_info_linked.last_saved";
+
+        var infoParam = new NpgsqlParameter("@info", (object)projectInfo ?? DBNull.Value) { NpgsqlDbType = NpgsqlDbType.Jsonb };
+        var paramsParam = new NpgsqlParameter("@params", (object)projectParameters ?? DBNull.Value) { NpgsqlDbType = NpgsqlDbType.Jsonb };
+
+        var args = new List<NpgsqlParameter>
+        {
+            new NpgsqlParameter("@host", hostDocId ?? (object)DBNull.Value),
+            new NpgsqlParameter("@link", linkDocId ?? (object)DBNull.Value),
+            new NpgsqlParameter("@name", modelName ?? (object)DBNull.Value),
+            new NpgsqlParameter("@guid", guid),
+            new NpgsqlParameter("@last_saved", lastSaved),
+            infoParam,
+            paramsParam
+        };
+
+        if (conn == null)
+            ExecuteNonQuery(sql, args.ToArray());
+        else
+            ExecuteNonQuery(conn, tx, sql, args.ToArray());
+    }
+
+    public void UpsertLinkedElementType(
+        string hostDocId,
+        int linkInstanceId,
+        string linkDocId,
+        int id,
+        Guid guid,
+        string family,
+        string typeName,
+        string category,
+        DateTime lastSaved,
+        NpgsqlConnection conn = null,
+        NpgsqlTransaction tx = null)
+    {
+        string sql = @"CREATE TABLE IF NOT EXISTS revit_linked_elementtypes (
+  host_doc_id TEXT NOT NULL,
+  link_instance_id INTEGER NOT NULL,
+  link_doc_id TEXT NOT NULL,
+  id INTEGER NOT NULL,
+  guid UUID,
+  family TEXT,
+  type_name TEXT,
+  category TEXT,
+  last_saved TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT pk_revit_linked_elementtypes PRIMARY KEY (host_doc_id, link_instance_id, id)
+);
+INSERT INTO revit_linked_elementtypes (
+  host_doc_id, link_instance_id, link_doc_id, id, guid, family, type_name, category, last_saved)
+VALUES (
+  @host, @iid, @link, @id, @guid, @family, @type, @cat, @ts)
+ON CONFLICT (host_doc_id, link_instance_id, id) DO UPDATE SET
+  link_doc_id = EXCLUDED.link_doc_id,
+  guid = EXCLUDED.guid,
+  family = EXCLUDED.family,
+  type_name = EXCLUDED.type_name,
+  category = EXCLUDED.category,
+  last_saved = EXCLUDED.last_saved
+WHERE EXCLUDED.last_saved > revit_linked_elementtypes.last_saved";
+
+        var args = new[]
+        {
+            new NpgsqlParameter("@host", hostDocId ?? (object)DBNull.Value),
+            new NpgsqlParameter("@iid", linkInstanceId),
+            new NpgsqlParameter("@link", linkDocId ?? (object)DBNull.Value),
+            new NpgsqlParameter("@id", id),
+            new NpgsqlParameter("@guid", guid),
+            new NpgsqlParameter("@family", family ?? (object)DBNull.Value),
+            new NpgsqlParameter("@type", typeName ?? (object)DBNull.Value),
+            new NpgsqlParameter("@cat", category ?? (object)DBNull.Value),
+            new NpgsqlParameter("@ts", lastSaved)
+        };
+
+        if (conn == null)
+            ExecuteNonQuery(sql, args);
+        else
+            ExecuteNonQuery(conn, tx, sql, args);
     }
 
     public DateTime? GetModelLastSaved(string docId)

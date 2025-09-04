@@ -40,6 +40,25 @@ public class BatchedPostgresDb : PostgresDb, IDisposable
     private readonly List<string> _elementTypeSqls = new List<string>();
     private readonly HashSet<int> _elementTypeIds = new HashSet<int>();
 
+    // Linked elements batching (scoped by host doc + link instance)
+    private readonly List<string> _linkedElementSqls = new List<string>();
+    private readonly HashSet<string> _linkedElementKeys = new HashSet<string>();
+    private class LinkedParameterRow
+    {
+        public string HostDocId;
+        public int LinkInstanceId;
+        public int ElementId;
+        public string Name;
+        public string Value;
+        public bool IsType;
+        public string[] Categories;
+        public DateTime LastSaved;
+    }
+    private readonly Dictionary<string, LinkedParameterRow> _linkedParamMap = new Dictionary<string, LinkedParameterRow>();
+    // Linked element types batching
+    private readonly List<string> _linkedElementTypeSqls = new List<string>();
+    private readonly HashSet<string> _linkedElementTypeKeys = new HashSet<string>();
+
 
     public BatchedPostgresDb(string connectionString) : base(connectionString)
     {
@@ -375,6 +394,9 @@ public class BatchedPostgresDb : PostgresDb, IDisposable
             FlushElementTypes();
             FlushParameters();
             FlushTypeParameters();
+            FlushLinkedElements();
+            FlushLinkedParameters();
+            FlushLinkedElementTypes();
             _tx?.Commit();
         }
         catch (Exception ex)
@@ -396,5 +418,180 @@ public class BatchedPostgresDb : PostgresDb, IDisposable
     {
         _tx?.Dispose();
         _conn?.Dispose();
+    }
+
+    public void StageLinkedElement(string hostDocId, int linkInstanceId, string linkDocId,
+        int id, Guid guid, string name, string category, string typeName, string level, DateTime lastSaved)
+    {
+        EnsureTransaction();
+        string key = hostDocId + "|" + linkInstanceId + "|" + id;
+        if (_linkedElementKeys.Contains(key)) return;
+        string esc(string s) => s != null ? "'" + s.Replace("'", "''") + "'" : "NULL";
+        _linkedElementSqls.Add($"({esc(hostDocId)}, {linkInstanceId}, {esc(linkDocId)}, {id}, '{guid}', {esc(name)}, {esc(category)}, {esc(typeName)}, {esc(level)}, '{lastSaved:O}')");
+        _linkedElementKeys.Add(key);
+        if (_linkedElementSqls.Count >= ChunkSize) FlushLinkedElements();
+    }
+
+    public void StageLinkedParameter(string hostDocId, int linkInstanceId, int elementId, string name, string value, bool isType,
+        string[] applicable, DateTime lastSaved)
+    {
+        EnsureTransaction();
+        string key = hostDocId + "|" + linkInstanceId + "|" + elementId + "::" + name;
+        _linkedParamMap[key] = new LinkedParameterRow
+        {
+            HostDocId = hostDocId,
+            LinkInstanceId = linkInstanceId,
+            ElementId = elementId,
+            Name = name,
+            Value = value,
+            IsType = isType,
+            Categories = applicable,
+            LastSaved = lastSaved
+        };
+        if (_linkedParamMap.Count >= ChunkSize) FlushLinkedParameters();
+    }
+
+    private void FlushLinkedElements()
+    {
+        if (_linkedElementSqls.Count == 0) return;
+        try
+        {
+            string head = "INSERT INTO revit_linked_elements (host_doc_id, link_instance_id, link_doc_id, id, guid, name, category, type_name, level, last_saved) VALUES ";
+            string sql = head + string.Join(",\n", _linkedElementSqls) + @"
+                ON CONFLICT (host_doc_id, link_instance_id, id) DO UPDATE SET
+                    link_doc_id = EXCLUDED.link_doc_id,
+                    guid = EXCLUDED.guid,
+                    name = EXCLUDED.name,
+                    category = EXCLUDED.category,
+                    type_name = EXCLUDED.type_name,
+                    level = EXCLUDED.level,
+                    last_saved = EXCLUDED.last_saved
+                WHERE EXCLUDED.last_saved > revit_linked_elements.last_saved";
+            new NpgsqlCommand(sql, _conn, _tx).ExecuteNonQuery();
+        }
+        catch (Exception ex)
+        {
+            LogError("FlushLinkedElements", ex);
+            throw;
+        }
+        _linkedElementSqls.Clear();
+        _linkedElementKeys.Clear();
+    }
+
+    private void FlushLinkedParameters()
+    {
+        if (_linkedParamMap.Count == 0) return;
+        try
+        {
+            var sb = new StringBuilder();
+            var cmd = new NpgsqlCommand(string.Empty, _conn, _tx);
+            int i = 0;
+            foreach (var row in _linkedParamMap.Values)
+            {
+                if (sb.Length > 0) sb.Append(",");
+                sb.Append($"(@host{i}, @iid{i}, @el{i}, @name{i}, @val{i}, @typ{i}, @cat{i}, @ts{i})");
+                cmd.Parameters.AddWithValue($"@host{i}", (object)row.HostDocId ?? DBNull.Value);
+                cmd.Parameters.AddWithValue($"@iid{i}", row.LinkInstanceId);
+                cmd.Parameters.AddWithValue($"@el{i}", row.ElementId);
+                cmd.Parameters.AddWithValue($"@name{i}", (object)row.Name ?? DBNull.Value);
+                cmd.Parameters.AddWithValue($"@val{i}", (object)row.Value ?? DBNull.Value);
+                cmd.Parameters.AddWithValue($"@typ{i}", row.IsType);
+                cmd.Parameters.AddWithValue($"@cat{i}", (object)row.Categories ?? DBNull.Value);
+                cmd.Parameters.AddWithValue($"@ts{i}", row.LastSaved);
+                i++;
+            }
+            cmd.CommandText = "INSERT INTO revit_linked_parameters (host_doc_id, link_instance_id, element_id, param_name, param_value, is_type, applicable_categories, last_saved) VALUES "
+                + sb.ToString() + @"
+                ON CONFLICT (host_doc_id, link_instance_id, element_id, param_name) DO UPDATE SET
+                    param_value = EXCLUDED.param_value,
+                    is_type = EXCLUDED.is_type,
+                    applicable_categories = EXCLUDED.applicable_categories,
+                    last_saved = EXCLUDED.last_saved
+                WHERE EXCLUDED.last_saved > revit_linked_parameters.last_saved";
+            cmd.ExecuteNonQuery();
+        }
+        catch (Exception ex)
+        {
+            LogError("FlushLinkedParameters", ex);
+            throw;
+        }
+        _linkedParamMap.Clear();
+    }
+
+    public void StageLinkedElementType(string hostDocId, int linkInstanceId, string linkDocId,
+        int id, Guid guid, string family, string typeName, string category, DateTime lastSaved)
+    {
+        EnsureTransaction();
+        string key = hostDocId + "|" + linkInstanceId + "|" + id;
+        if (_linkedElementTypeKeys.Contains(key)) return;
+        string esc(string s) => s != null ? "'" + s.Replace("'", "''") + "'" : "NULL";
+        _linkedElementTypeSqls.Add($"({esc(hostDocId)}, {linkInstanceId}, {esc(linkDocId)}, {id}, '{guid}', {esc(family)}, {esc(typeName)}, {esc(category)}, '{lastSaved:O}')");
+        _linkedElementTypeKeys.Add(key);
+        if (_linkedElementTypeSqls.Count >= ChunkSize) FlushLinkedElementTypes();
+    }
+
+    private void FlushLinkedElementTypes()
+    {
+        if (_linkedElementTypeSqls.Count == 0) return;
+        try
+        {
+            string head = "INSERT INTO revit_linked_elementtypes (host_doc_id, link_instance_id, link_doc_id, id, guid, family, type_name, category, last_saved) VALUES ";
+            string sql = head + string.Join(",\n", _linkedElementTypeSqls) + @"
+                ON CONFLICT (host_doc_id, link_instance_id, id) DO UPDATE SET
+                    link_doc_id = EXCLUDED.link_doc_id,
+                    guid = EXCLUDED.guid,
+                    family = EXCLUDED.family,
+                    type_name = EXCLUDED.type_name,
+                    category = EXCLUDED.category,
+                    last_saved = EXCLUDED.last_saved
+                WHERE EXCLUDED.last_saved > revit_linked_elementtypes.last_saved";
+            new NpgsqlCommand(sql, _conn, _tx).ExecuteNonQuery();
+        }
+        catch (Exception ex)
+        {
+            LogError("FlushLinkedElementTypes", ex);
+            throw;
+        }
+        _linkedElementTypeSqls.Clear();
+        _linkedElementTypeKeys.Clear();
+    }
+
+    // Prune stale rows older than current session
+    public void PruneHostStaleInternal(string docId, DateTime lastSaved)
+    {
+        EnsureTransaction();
+        string[] sqls = new[]
+        {
+            "DELETE FROM revit_parameters WHERE doc_id=@doc AND last_saved < @ts",
+            "DELETE FROM revit_type_parameters WHERE doc_id=@doc AND last_saved < @ts",
+            "DELETE FROM revit_elements WHERE doc_id=@doc AND last_saved < @ts",
+            "DELETE FROM revit_elementTypes WHERE doc_id=@doc AND last_saved < @ts"
+        };
+        foreach (var s in sqls)
+        {
+            var cmd = new NpgsqlCommand(s, _conn, _tx);
+            cmd.Parameters.AddWithValue("@doc", (object)docId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@ts", lastSaved);
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    public void PruneLinkedStaleInternal(string hostDocId, int linkInstanceId, DateTime lastSaved)
+    {
+        EnsureTransaction();
+        string[] sqls = new[]
+        {
+            "DELETE FROM revit_linked_parameters WHERE host_doc_id=@host AND link_instance_id=@iid AND last_saved < @ts",
+            "DELETE FROM revit_linked_elements WHERE host_doc_id=@host AND link_instance_id=@iid AND last_saved < @ts",
+            "DELETE FROM revit_linked_elementtypes WHERE host_doc_id=@host AND link_instance_id=@iid AND last_saved < @ts"
+        };
+        foreach (var s in sqls)
+        {
+            var cmd = new NpgsqlCommand(s, _conn, _tx);
+            cmd.Parameters.AddWithValue("@host", (object)hostDocId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@iid", linkInstanceId);
+            cmd.Parameters.AddWithValue("@ts", lastSaved);
+            cmd.ExecuteNonQuery();
+        }
     }
 }

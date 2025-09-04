@@ -1,4 +1,4 @@
-using Autodesk.Revit.DB;
+﻿using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
@@ -6,8 +6,9 @@ using System.Configuration;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using Newtonsoft.Json;
 using Npgsql;
+using System.Linq;
 
-public class SyncModelToSqlCommand : ICommand
+public class DbSyncModelCommand : ICommand
 {
     public Dictionary<string, object> Execute(UIApplication app, Dictionary<string, string> input)
     {
@@ -54,7 +55,7 @@ public class SyncModelToSqlCommand : ICommand
             paramCopy.Remove("async");
             var step = new Dictionary<string, object>
             {
-                { "action", "SyncModelToSql" },
+                { "action", "Db.SyncModel" },
                 { "params", paramCopy }
             };
             string planJson = JsonConvert.SerializeObject(new[] { step });
@@ -153,8 +154,12 @@ public class SyncModelToSqlCommand : ICommand
             db.StageElement(element.Id.IntegerValue, ParseGuid(element.UniqueId), element.Name, element.Category?.Name ?? string.Empty, typeName, levelName, doc.PathName, lastSaved);
             count++;
         }
+        // Prune host stale rows before optional link sync
+        db.PruneHostStaleInternal(doc.PathName, lastSaved);
+
         // Optional: sync link instances metadata if requested
-        bool syncLinks = input.TryGetValue("sync_links", out var syncLinksVal) && syncLinksVal.Equals("true", StringComparison.OrdinalIgnoreCase);
+        bool syncLinks = (input.TryGetValue("sync_links", out var syncLinksVal) && syncLinksVal.Equals("true", StringComparison.OrdinalIgnoreCase)) 
+                    || (input.TryGetValue("include_links", out var includeLinksVal) && includeLinksVal.Equals("true", StringComparison.OrdinalIgnoreCase));
         if (syncLinks)
         {
             try
@@ -162,6 +167,7 @@ public class SyncModelToSqlCommand : ICommand
                 var instances = new FilteredElementCollector(doc)
                     .OfClass(typeof(RevitLinkInstance))
                     .Cast<RevitLinkInstance>();
+                var prunedInstances = new List<int>();
                 foreach (var inst in instances)
                 {
                     string hostDocId = doc.PathName;
@@ -179,14 +185,11 @@ public class SyncModelToSqlCommand : ICommand
                         try
                         {
                             var linkType = doc.GetElement(inst.GetTypeId()) as RevitLinkType;
-                            var path = linkType?.PathName;
-                            if (string.IsNullOrWhiteSpace(path))
-                            {
-                                var ext = linkType?.GetExternalFileReference();
-                                var mp = ext?.GetPath();
-                                if (mp != null)
-                                    path = ModelPathUtils.ConvertModelPathToUserVisiblePath(mp);
-                            }
+                            string path = null;
+                            var ext = linkType?.GetExternalFileReference();
+                            var mp = ext?.GetPath();
+                            if (mp != null)
+                                path = ModelPathUtils.ConvertModelPathToUserVisiblePath(mp);
                             linkDocId = path ?? string.Empty;
                         }
                         catch { linkDocId = string.Empty; }
@@ -218,7 +221,8 @@ public class SyncModelToSqlCommand : ICommand
                         catch { }
                     }
 
-                    // Write link instance row
+                    // Write/Update link instance row
+                    // Use non-batched helper to ensure table exists; keep in same connection where possible
                     var pg = new PostgresDb(conn);
                     pg.UpsertLinkInstance(hostDocId, instanceId, linkDocId,
                         ox, oy, oz,
@@ -226,7 +230,90 @@ public class SyncModelToSqlCommand : ICommand
                         byx, byy, byz,
                         bzx, bzy, bzz,
                         rotz, atn, lastSaved);
+
+                    // If link document is loaded, upsert its elements per instance
+                    if (linkDoc != null)
+                    {
+                        // Build a type id -> name map for the linked doc
+                        var linkTypes = new FilteredElementCollector(linkDoc).WhereElementIsElementType();
+                        var linkTypeMap = new Dictionary<ElementId, string>();
+                        foreach (ElementType t in linkTypes)
+                        {
+                            if (!linkTypeMap.ContainsKey(t.Id))
+                                linkTypeMap[t.Id] = t.Name;
+
+                            // Capture type parameters under linked scope (is_type = true)
+                            foreach (Parameter p in t.Parameters)
+                            {
+                                if (p?.Definition?.Name == null) continue;
+                                string val = null;
+                                switch (p.StorageType)
+                                {
+                                    case StorageType.String:  val = p.AsString(); break;
+                                    case StorageType.Integer: val = p.AsInteger().ToString(); break;
+                                    case StorageType.Double:  val = p.AsDouble().ToString(); break;
+                                    case StorageType.ElementId: val = p.AsElementId().IntegerValue.ToString(); break;
+                                }
+                                db.StageLinkedParameter(hostDocId, instanceId, t.Id.IntegerValue, p.Definition.Name, val, true,
+                                    new[] { t.Category?.Name ?? string.Empty }, lastSaved);
+                            }
+
+                            // Capture linked element type metadata
+                            db.StageLinkedElementType(hostDocId, instanceId, linkDocId,
+                                t.Id.IntegerValue, ParseGuid(t.UniqueId), t.FamilyName, t.Name, t.Category?.Name ?? string.Empty, lastSaved);
+                        }
+
+                        var linkElems = new FilteredElementCollector(linkDoc).WhereElementIsNotElementType();
+                        foreach (var le in linkElems)
+                        {
+                            string ltypeName = string.Empty;
+                            if (linkTypeMap.TryGetValue(le.GetTypeId(), out string tn))
+                                ltypeName = tn;
+
+                            string llevel = string.Empty;
+                            if (le.LevelId != ElementId.InvalidElementId)
+                            {
+                                var lvl = linkDoc.GetElement(le.LevelId);
+                                if (lvl != null) llevel = lvl.Name;
+                            }
+                            db.StageLinkedElement(hostDocId, instanceId, linkDocId,
+                                le.Id.IntegerValue,
+                                ParseGuid(le.UniqueId),
+                                le.Name,
+                                le.Category?.Name ?? string.Empty,
+                                ltypeName,
+                                llevel,
+                                lastSaved);
+
+                            // Capture element parameters under linked scope
+                            foreach (Parameter p in le.Parameters)
+                            {
+                                if (p?.Definition?.Name == null) continue;
+                                string val = null;
+                                switch (p.StorageType)
+                                {
+                                    case StorageType.String:  val = p.AsString(); break;
+                                    case StorageType.Integer: val = p.AsInteger().ToString(); break;
+                                    case StorageType.Double:  val = p.AsDouble().ToString(); break;
+                                    case StorageType.ElementId: val = p.AsElementId().IntegerValue.ToString(); break;
+                                }
+                                db.StageLinkedParameter(hostDocId, instanceId, le.Id.IntegerValue, p.Definition.Name, val, false,
+                                    new[] { le.Category?.Name ?? string.Empty }, lastSaved);
+                            }
+                        }
+
+                        // Linked model info under host context
+                        db.UpsertLinkedModelInfo(hostDocId, linkDocId, linkDoc.Title, ParseGuid(linkDoc.ProjectInformation?.UniqueId), lastSaved, null, null);
+
+                        // Record instance for pruning
+                        prunedInstances.Add(instanceId);
+                    }
                 }
+
+                // Prune stale rows for host and processed link instances
+                db.PruneHostStaleInternal(doc.PathName, lastSaved);
+                foreach (var iid in prunedInstances)
+                    db.PruneLinkedStaleInternal(doc.PathName, iid, lastSaved);
             }
             catch (Exception ex)
             {
@@ -257,3 +344,5 @@ public class SyncModelToSqlCommand : ICommand
         return Guid.Empty;
     }
 }
+
+

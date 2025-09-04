@@ -111,17 +111,17 @@ This project provides a Revit add‑in that exposes a Model Context Protocol (MC
 ## Security Notes
 
 - The listener currently binds to `http://*:5005/mcp/` in code; for workstation use, prefer restricting to loopback `http://localhost:5005/mcp/` and add a simple auth token header at the MCP edge (reverse proxy) or in code.
-- `QuerySql` executes arbitrary SQL; protect access or disable in untrusted environments.
+- `Db.Query` executes arbitrary SQL; protect access or disable in untrusted environments.
 - Avoid committing credentials; prefer `REVIT_DB_CONN` or local `revit-conn.txt` (git‑ignored).
 
 ---
 
 ## Commands (high level)
 
-- Listing: `ListCategories`, `ListElements`, `ListElementParameters`, `ListFamiliesAndTypes`, `ListViews`, `ListSheets`, `ListSchedules`, `ListModelContext`.
-- Modifying: `ModifyElements`, `NewSharedParameter`, `CreateSheet`, `PlaceViewsOnSheet`, `AddViewFilter`.
-- Data: `SyncModelToSql` (optionally `"async":"true"`), `QuerySql`.
-- Orchestration: `ExecutePlan`, `EnqueuePlan` (background via DB queue).
+- Listing: `Categories.List`, `Elements.List`, `Parameters.ListForElements`, `Types.List`, `Views.List`, `Sheets.List`, `Schedules.List`, `Model.GetContext`.
+- Modifying: `Elements.Modify`, `Parameters.CreateShared`, `Sheets.Create`, `Views.PlaceOnSheet`, `Filters.AddToView`.
+- Data: `Db.SyncModel` (optionally `"async":"true"`), `Db.Query`.
+- Orchestration: `Plan.Execute`, `Plan.Enqueue` (background via DB queue).
 
 See `Commands/*` for request fields and `AIAgentWorkflows/*` for examples embedded in the n8n tool descriptions.
 
@@ -129,7 +129,7 @@ See `Commands/*` for request fields and `AIAgentWorkflows/*` for examples embedd
 
 ## Troubleshooting
 
-- If DB connectivity fails, check `C:\\Temp\\pg-debug.txt` (written by `SyncModelToSql`).
+- If DB connectivity fails, check `C:\\Temp\\pg-debug.txt` (written by `Db.SyncModel`).
 - Logs: `mcp.log` (HTTP) and `revit-export-error.log` (export issues).
 - If vector tools appear empty, make sure `pgvector` is installed and the embedding tables are seeded.
 
@@ -138,3 +138,61 @@ See `Commands/*` for request fields and `AIAgentWorkflows/*` for examples embedd
 ## License
 
 See `LICENSE`.
+
+---
+
+## Example Payloads
+
+- Db.SyncModel:
+  - Action: `Db.SyncModel`
+  - Notes: accepts optional `"async":"true"`, `"sync_links":"true"`, and `"conn_file"`.
+
+  ```json
+  {
+    "action": "Db.SyncModel",
+    "async": "false",
+    "sync_links": "true",
+    "conn_file": "C:\\Temp\\revit-conn.txt"
+  }
+  ```
+
+- Db.Query:
+  - Action: `Db.Query`
+  - Notes: pass SQL in `sql`, optional parameters JSON in `params`.
+
+  ```json
+  {
+    "action": "Db.Query",
+    "sql": "SELECT id, name, category FROM revit_elements WHERE doc_id=@doc LIMIT 5",
+    "params": {"@doc": "C:\\Projects\\Sample.rvt"}
+  }
+  ```
+
+- Views.List (writes to DB when connection present):
+
+  ```json
+  {"action": "Views.List", "include_linked": "false"}
+  ```
+
+- ListCategories:
+
+  ```json
+  {"action": "ListCategories", "include_linked": "false"}
+  ```
+
+> Tip: If you don�t want to store credentials in `App.config`, set `REVIT_DB_CONN` or provide `conn_file` pointing to a local text file with the connection string.
+
+---
+
+## Schema Notes
+
+- The bundled `postgres_schema.sql` uses composite keys that include `doc_id` (or `host_doc_id` with `link_instance_id`) to support multiple Revit models and multiple link instances in the same database.
+- Existing databases created with earlier versions (single-key tables) still work: the code attempts a doc-aware upsert first and falls back to legacy constraints if needed.
+- For new installs, run `postgres_schema.sql` to get the doc-aware schema.
+- Linked data (when `Db.SyncModel` is called with `"include_links":"true"`):
+  - `revit_link_instances(host_doc_id, instance_id, ...)`: one row per link instance in the host.
+  - `revit_linked_elements(host_doc_id, link_instance_id, id, ...)`: elements per link instance (batched).
+  - `revit_linked_parameters(host_doc_id, link_instance_id, element_id, param_name, is_type, ...)`: element params and type params (`is_type=true`).
+  - `revit_linked_elementtypes(host_doc_id, link_instance_id, id, ...)`: linked element type metadata (batched).
+  - `model_info_linked(host_doc_id, link_doc_id, ...)`: per-host model info for the linked document.
+- Stale-row pruning: during sync, rows older than the current session `last_saved` are pruned for the active host model and processed link instances.

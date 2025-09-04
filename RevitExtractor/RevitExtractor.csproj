@@ -71,7 +71,6 @@
     <Compile Include="..\Data\PostgresDb.cs" Link="PostgresDb.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ExportModelToPostgresCommand.cs" />
     <Compile Include="..\Data\BatchedPostgresDb.cs" Link="BatchedPostgresDb.cs" />
   </ItemGroup>
   <ItemGroup>

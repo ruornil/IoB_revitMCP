@@ -18,27 +18,40 @@ public class RequestHandler : IExternalEventHandler
 
     public static readonly Dictionary<string, ICommand> CommandMap = new Dictionary<string, ICommand>
     {
-        { "AddViewFilter", new AddViewFilterCommand()},
-        { "CreateSheet" , new CreateSheetCommand() },
-        { "EnqueuePlan", new EnqueuePlanCommand() },
-        { "ExecutePlan", new PlanExecutorCommand() },
-        { "ExportToJson" , new ExportToJsonCommand() },
-        { "FilterByParameter", new FilterByParameterCommand() },
-        { "ListElementParameters", new ListElementParametersCommand() },
-        { "ListCategories", new ListCategoriesCommand()},
-        { "ListElementsByCategory", new ListElementsCommand() },
-        { "ListFamiliesAndTypes", new ListFamiliesAndTypesCommand()},
-        { "ListModelContext", new ListModelContextCommand()},
-        { "ListSchedules", new ListSchedulesCommand()},
-        { "ListSheets", new ListSheetsCommand()},
-        { "ListViews", new ListViewsCommand()},
-        { "ListLinkedDocuments", new ListLinkedDocumentsCommand()},
-        { "CaptureToolState", new CaptureToolStateCommand()},
-        { "ModifyElements", new ModifyElementsCommand() },
-        { "NewSharedParameter", new NewSharedParameterCommand() },
-        { "PlaceViewsOnSheet", new PlaceViewsOnSheetCommand() },
-        { "QuerySql", new QuerySqlCommand()},
-        { "SyncModelToSql", new SyncModelToSqlCommand()}
+        // Plans
+        { "Plan.Enqueue", new EnqueuePlanCommand() },
+        { "Plan.Execute", new PlanExecutorCommand() },
+
+        // Database
+        { "Db.Query", new QuerySqlCommand()},
+        { "Db.SyncModel", new DbSyncModelCommand() },
+
+        // Model / Tools
+        { "Model.GetContext", new ListModelContextCommand()},
+        { "Tools.CaptureState", new CaptureToolStateCommand()},
+
+        // Categories / Types / Elements / Parameters
+        { "Categories.List", new ListCategoriesCommand()},
+        { "Types.List", new ListFamiliesAndTypesCommand()},
+        { "Elements.List", new ListElementsCommand() },
+        { "Elements.Modify", new ModifyElementsCommand() },
+        { "Parameters.ListForElements", new ListElementParametersCommand() },
+        { "Parameters.CreateShared", new NewSharedParameterCommand() },
+        { "Elements.FilterByParameter", new FilterByParameterCommand() },
+
+        // Views / Sheets / Schedules / Filters
+        { "Views.List", new ListViewsCommand()},
+        { "Views.PlaceOnSheet", new PlaceViewsOnSheetCommand() },
+        { "Sheets.List", new ListSheetsCommand()},
+        { "Sheets.Create" , new CreateSheetCommand() },
+        { "Schedules.List", new ListSchedulesCommand()},
+        { "Filters.AddToView", new AddViewFilterCommand()},
+
+        // Links
+        { "Links.List", new ListLinkedDocumentsCommand()},
+
+        // Export
+        { "Export.ToJson" , new ExportToJsonCommand() }
     };
 
     public void SetRequest(string body, HttpListenerContext context)

@@ -42,17 +42,12 @@ public class ListLinkedDocumentsCommand : ICommand
                 string linkPath = null;
                 try
                 {
-                    // Revit 2023: PathName often works for RevitLinkType
-                    linkPath = linkType?.PathName;
-                    if (string.IsNullOrWhiteSpace(linkPath))
+                    var ext = linkType?.GetExternalFileReference();
+                    if (ext != null)
                     {
-                        var ext = linkType?.GetExternalFileReference();
-                        if (ext != null)
-                        {
-                            var mp = ext.GetPath();
-                            if (mp != null)
-                                linkPath = ModelPathUtils.ConvertModelPathToUserVisiblePath(mp);
-                        }
+                        var mp = ext.GetPath();
+                        if (mp != null)
+                            linkPath = ModelPathUtils.ConvertModelPathToUserVisiblePath(mp);
                     }
                 }
                 catch { }
@@ -129,4 +124,3 @@ public class ListLinkedDocumentsCommand : ICommand
         return Guid.Empty;
     }
 }
-
