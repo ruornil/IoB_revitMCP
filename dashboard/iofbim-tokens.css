@@ -1,0 +1,23 @@
+:root {
+  /* Imported from iofbim-design-system tokens.css */
+  --color-customBg: 228 227 225; /* #E4E3E1 */
+  --color-prim:      154 150 146; /* #9A9692 */
+  --color-accent:    206 206 206; /* #CECECE */
+  --color-highlight: 182 169 162; /* #B6A9A2 */
+
+  --color-textDark:  63 59 54;    /* #3F3B36 */
+  --color-textMid:   106 97 92;   /* #6A615C */
+  --color-textLight: 241 235 231; /* #F1EBE7 */
+  --color-textAccent:70 145 98;   /* #469162 */
+
+  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+}
+

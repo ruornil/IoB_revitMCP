@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>n8n Chat</title>
+    <link href="https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css" rel="stylesheet" />
+    <link rel="stylesheet" href="./iofbim-tokens.css" />
+    <style>
+      :root {
+        /* Map iob-design-system tokens to chat variables (light theme) */
+        --dash-bg: rgb(var(--color-customBg, 228 0 0));
+        --dash-panel: rgb(var(--color-textLight, 241 235 231));
+        --dash-text: rgb(var(--color-textDark, 63 59 54));
+        --dash-muted: rgb(var(--color-textMid, 106 97 92));
+        --dash-accent: rgb(var(--color-textAccent, 70 145 98));
+        --dash-border: rgba(var(--color-textDark, 63 59 54), 0.15);
+        --chat--color-primary: #e74266;
+        --chat--color-primary-shade-50: #db4061;
+        --chat--color-primary-shade-100: #cf3c5c;
+        --chat--color-secondary: rgb(var(--color-textMid, 106 97 92));
+        --chat--color-secondary-shade-50: rgb(var(--color-textMid, 86 77 72));
+        --chat--color-white: rgb(var(--color-highlight: 182 169 162));
+        --chat--color-light: rgb(var(--color-textLight, 241 235 231));
+        --chat--color-light-shade-50: #e6e9f1;
+        --chat--color-light-shade-100: #c2c5cc;
+        --chat--color-medium: #d2d4d9;
+        --chat--color-dark: rgb(var(--color-textAccent, 70 145 98));
+        --chat--color-disabled: #777980;
+        --chat--color-typing: #404040;
+
+        --chat--spacing: 1rem;
+        --chat--border-radius: 0.25rem;
+        --chat--transition-duration: 0.15s;
+
+        --chat--window--width: 400px;
+        --chat--window--height: 600px;
+
+        --chat--header-height: auto;
+        --chat--header--padding: var(--chat--spacing);
+        --chat--header--background: var(--chat--color-dark);
+        --chat--header--color: var(--chat--color-light);
+        --chat--header--border-top: none;
+        --chat--header--border-bottom: none;
+        --chat--heading--font-size: 2em;
+        --chat--subtitle--font-size: inherit;
+        --chat--subtitle--line-height: 1.8;
+
+        --chat--textarea--height: 50px;
+
+        --chat--message--font-size: 1rem;
+        --chat--message--padding: var(--chat--spacing);
+        --chat--message--border-radius: var(--chat--border-radius);
+        --chat--message-line-height: 1.8;
+        --chat--message--bot--background: var(--chat--color-white);
+        --chat--message--bot--color: var(--chat--color-dark);
+        --chat--message--bot--border: none;
+        --chat--message--user--background: var(--chat--color-secondary);
+        --chat--message--user--color: var(--chat--color-white);
+        --chat--message--user--border: none;
+        --chat--message--pre--background: rgba(0, 0, 0, 0.05);
+
+        --chat--toggle--background: var(--chat--color-primary);
+        --chat--toggle--hover--background: var(--chat--color-primary-shade-50);
+        --chat--toggle--active--background: var(--chat--color-primary-shade-100);
+        --chat--toggle--color: var(--chat--color-white);
+        --chat--toggle--size: 64px;
+      }
+      html, body { height:100%; width:100%; margin:0; background:var(--dash-bg); color:var(--dash-text); font:14px/1.4 system-ui, Segoe UI, Roboto, Arial; }
+      #wrap { display:flex; flex-direction:column; height:100%; width:100%; }
+      /* Ensure the fullscreen mode takes the full container */
+      #n8n-chat { flex:1 1 auto; height:100%; width:100%; }
+      a { color: var(--dash-accent); text-decoration:none; }
+      a:hover { text-decoration:underline; }
+    </style>
+  </head>
+  <body>
+    <div id="wrap">
+      <div id="n8n-chat"></div>
+    </div>
+    <script type="module">
+      import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';
+      const params = new URLSearchParams(location.search);
+      const webhookUrl = params.get('webhook');
+      const doc = params.get('doc') || '';
+      const model = params.get('model') || '';
+      const sid = params.get('sid') || '';
+      const metadata = {};
+      if (doc) metadata.doc_id = doc;
+      if (model) metadata.model_name = model;
+      if (sid) metadata.session_id = sid;
+
+      // Optional accent override via query param
+      const accent = params.get('accent') || '';
+      if (accent) document.documentElement.style.setProperty('--dash-accent', accent);
+
+      createChat({
+        webhookUrl,
+        target: '#n8n-chat',
+        mode: 'fullscreen',
+        loadPreviousSession: true,
+        metadata,
+        	initialMessages: [
+          "Let's dig down into your Revit Model",
+          'This is IoB Revit MCP, plugin. I am not a Claude based MCP.',
+          "What we can do together is listed below,",
+          'Synchronise model information to database,',
+          'Get, select elements, add view filters,'
+        ],
+        i18n: {
+          en: {
+            title: 'I of BIM Revit MCP',
+            subtitle: "You can ask me questions about your opened revit document.",
+            footer: '',
+            getStarted: 'New Conversation',
+            inputPlaceholder: 'Type your question..',
+          },
+        },
+      });
+    </script>
+  </body>
+</html>
+
+

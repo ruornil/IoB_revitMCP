@@ -1,4 +1,4 @@
-﻿// RequestHandler.cs - Updated to support ExecutePlan
+// RequestHandler.cs - Updated to support ExecutePlan
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using IronPython.Hosting;
@@ -25,6 +25,7 @@ public class RequestHandler : IExternalEventHandler
         // Database
         { "Db.Query", new QuerySqlCommand()},
         { "Db.SyncModel", new DbSyncModelCommand() },
+        { "Db.Summary", new DbSummaryCommand() },
 
         // Model / Tools
         { "Model.GetContext", new ListModelContextCommand()},
@@ -36,6 +37,7 @@ public class RequestHandler : IExternalEventHandler
         { "Elements.List", new ListElementsCommand() },
         { "Elements.Modify", new ModifyElementsCommand() },
         { "Parameters.ListForElements", new ListElementParametersCommand() },
+        { "Parameters.ListForCategory", new ListCategoryParametersCommand() },
         { "Parameters.CreateShared", new NewSharedParameterCommand() },
         { "Elements.FilterByParameter", new FilterByParameterCommand() },
 
@@ -51,7 +53,13 @@ public class RequestHandler : IExternalEventHandler
         { "Links.List", new ListLinkedDocumentsCommand()},
 
         // Export
-        { "Export.ToJson" , new ExportToJsonCommand() }
+        { "Export.ToJson" , new ExportToJsonCommand() },
+
+        // Proxy helpers (limited/local only)
+        { "Proxy.N8nChat", new ProxyN8nChatCommand() },
+
+        // UI helpers
+        { "Ui.PushEvent", new UiPushEventCommand() }
     };
 
     public void SetRequest(string body, HttpListenerContext context)
@@ -115,6 +123,14 @@ public class RequestHandler : IExternalEventHandler
 
         string json = JsonConvert.SerializeObject(response);
         byte[] buffer = Encoding.UTF8.GetBytes(json);
+            // CORS for browser-based dashboards
+            try
+            {
+                context.Response.Headers["Access-Control-Allow-Origin"] = "*";
+                context.Response.Headers["Access-Control-Allow-Methods"] = "POST, OPTIONS";
+                context.Response.Headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization";
+            }
+            catch { }
             context.Response.ContentType = "application/json";
             context.Response.OutputStream.Write(buffer, 0, buffer.Length);
             context.Response.Close();
@@ -123,3 +139,6 @@ public class RequestHandler : IExternalEventHandler
 
     public string GetName() => "MCP Request Handler";
 }
+
+
+

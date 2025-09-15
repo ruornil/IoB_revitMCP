@@ -59,6 +59,15 @@ public static class McpServer
         StreamReader reader = null;
         try
         {
+            // Handle CORS preflight
+            if (string.Equals(context.Request.HttpMethod, "OPTIONS", StringComparison.OrdinalIgnoreCase))
+            {
+                TrySetCors(context.Response);
+                context.Response.StatusCode = 200;
+                context.Response.Close();
+                return;
+            }
+
             reader = new StreamReader(context.Request.InputStream);
             string requestBody = await reader.ReadToEndAsync();
 
@@ -72,6 +81,7 @@ public static class McpServer
             {
                 context.Response.StatusCode = 500;
                 byte[] buffer = Encoding.UTF8.GetBytes("{\"status\":\"error\"}");
+                TrySetCors(context.Response);
                 await context.Response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
                 context.Response.Close();
             }
@@ -90,6 +100,17 @@ public static class McpServer
         {
             File.AppendAllText("mcp.log",
                 $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {message}{Environment.NewLine}");
+        }
+        catch { }
+    }
+
+    private static void TrySetCors(HttpListenerResponse response)
+    {
+        try
+        {
+            response.Headers["Access-Control-Allow-Origin"] = "*";
+            response.Headers["Access-Control-Allow-Methods"] = "POST, OPTIONS";
+            response.Headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization";
         }
         catch { }
     }

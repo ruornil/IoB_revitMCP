@@ -1,8 +1,9 @@
-// GetElementParametersCommand.cs - Retrieves parameters for elements by ID or selection
+// GetElementParametersCommand.cs - Retrieves parameters for elements and syncs them to PostgreSQL
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 
 public class ListElementParametersCommand : ICommand
@@ -19,38 +20,117 @@ public class ListElementParametersCommand : ICommand
             response["message"] = "No active document.";
             return response;
         }
+
         string conn = DbConfigHelper.GetConnectionString(input);
-        BatchedPostgresDb db = null;
-        if (!string.IsNullOrEmpty(conn))
+        if (string.IsNullOrEmpty(conn))
         {
-            db = new BatchedPostgresDb(conn);
+            response["status"] = "error";
+            response["message"] = "No connection string found. " + DbConfigHelper.GetHelpMessage();
+            return response;
         }
 
-        // Precompute project parameter categories from ParameterBindings
+        var ids = ParseElementIds(input);
+        if (ids.Count == 0)
+        {
+            response["status"] = "error";
+            response["message"] = "No element_ids provided.";
+            return response;
+        }
+
+        HashSet<string> filterNames = null;
+        if (input.TryGetValue("param_names", out var namesStr) && !string.IsNullOrWhiteSpace(namesStr))
+        {
+            filterNames = new HashSet<string>(
+                namesStr.Split(',').Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s)),
+                StringComparer.OrdinalIgnoreCase);
+        }
+
         DateTime lastSaved = System.IO.File.GetLastWriteTime(doc.PathName);
-        if (!ModelCache.TryGet(doc.PathName + "/paramCats", lastSaved, out Dictionary<string, List<string>> parameterCategories))
-        {
-            parameterCategories = new Dictionary<string, List<string>>();
-            var bindingMap = doc.ParameterBindings;
-            var iterator = bindingMap.ForwardIterator();
-            iterator.Reset();
-            while (iterator.MoveNext())
-            {
-                Definition definition = iterator.Key;
-                ElementBinding binding = iterator.Current as ElementBinding;
-                if (definition == null || binding == null) continue;
+        var parameterCategories = ParameterMetadataCache.GetParameterCategories(doc, lastSaved);
 
-                var cats = new List<string>();
-                foreach (Category cat in binding.Categories)
+        var syncedElements = new List<int>();
+        var failedElements = new List<Dictionary<string, object>>();
+        var parameterNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        using (var db = new BatchedPostgresDb(conn))
+        {
+            foreach (var id in ids)
+            {
+                try
                 {
-                    if (cat != null)
-                        cats.Add(cat.Name);
+                    var element = doc.GetElement(id);
+                    if (element == null)
+                    {
+                        failedElements.Add(new Dictionary<string, object>
+                        {
+                            ["element_id"] = id.IntegerValue,
+                            ["error"] = "Element not found."
+                        });
+                        continue;
+                    }
+
+                    StageElementMetadata(doc, element, db, lastSaved);
+                    StageParameterMetadata(element, filterNames, parameterCategories, parameterNames, db, lastSaved, doc.PathName);
+
+                    syncedElements.Add(element.Id.IntegerValue);
                 }
-                parameterCategories[definition.Name] = cats;
+                catch (Exception ex)
+                {
+                    failedElements.Add(new Dictionary<string, object>
+                    {
+                        ["element_id"] = id.IntegerValue,
+                        ["error"] = ex.Message
+                    });
+                }
             }
-            ModelCache.Set(doc.PathName + "/paramCats", lastSaved, parameterCategories);
+
+            try
+            {
+                db.UpsertModelInfo(
+                    doc.PathName,
+                    doc.Title,
+                    ParseGuid(doc.ProjectInformation?.UniqueId),
+                    lastSaved,
+                    null,
+                    null);
+                db.CommitAll();
+            }
+            catch (Exception ex)
+            {
+                failedElements.Add(new Dictionary<string, object>
+                {
+                    ["element_id"] = 0,
+                    ["error"] = "Database commit failed: " + ex.Message
+                });
+            }
         }
 
+        bool anyFailures = failedElements.Count > 0;
+        response["status"] = !anyFailures ? "success" : (syncedElements.Count > 0 ? "partial" : "error");
+        response["doc_id"] = doc.PathName;
+        response["synced_element_ids"] = syncedElements;
+        response["parameter_names"] = parameterNames.OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList();
+        if (anyFailures)
+            response["failed_elements"] = failedElements;
+
+        if (!anyFailures)
+        {
+            response["message"] = $"Parameters synced for {syncedElements.Count} elements.";
+        }
+        else if (syncedElements.Count == 0)
+        {
+            response["message"] = "No element parameters were synced. Check failed_elements for details.";
+        }
+        else
+        {
+            response["message"] = "Some elements failed to sync. Check failed_elements for details.";
+        }
+
+        return response;
+    }
+
+    private static List<ElementId> ParseElementIds(Dictionary<string, string> input)
+    {
         var ids = new List<ElementId>();
         if (input.TryGetValue("element_ids", out var idStr) && !string.IsNullOrWhiteSpace(idStr))
         {
@@ -60,123 +140,98 @@ public class ListElementParametersCommand : ICommand
                     ids.Add(new ElementId(intId));
             }
         }
+        return ids;
+    }
 
-        if (ids.Count == 0)
+    private static void StageElementMetadata(Document doc, Element element, BatchedPostgresDb db, DateTime lastSaved)
+    {
+        string typeName = string.Empty;
+        if (element != null)
         {
-            response["status"] = "error";
-            response["message"] = "No element_ids provided.";
-            return response;
+            var type = doc.GetElement(element.GetTypeId()) as ElementType;
+            if (type != null)
+                typeName = type.Name;
         }
 
-        var result = new Dictionary<string, object>();
-        var paramNames = new HashSet<string>();
-        HashSet<string> filterNames = null;
-        if (input.TryGetValue("param_names", out var namesStr) && !string.IsNullOrWhiteSpace(namesStr))
+        string levelName = string.Empty;
+        if (element is Element el && el.LevelId != ElementId.InvalidElementId)
         {
-            filterNames = new HashSet<string>(namesStr.Split(',').Select(s => s.Trim()), StringComparer.OrdinalIgnoreCase);
-        }
-        DateTime now = DateTime.UtcNow;
-        foreach (var id in ids)
-        {
-            var element = doc.GetElement(id);
-            if (element == null)
-            {
-                result[id.IntegerValue.ToString()] = "Element not found.";
-                continue;
-            }
-
-            string typeName = string.Empty;
-            var et = doc.GetElement(element.GetTypeId()) as ElementType;
-            if (et != null) typeName = et.Name;
-
-            string levelName = string.Empty;
-            if (element.LevelId != ElementId.InvalidElementId)
-            {
-                var lvl = doc.GetElement(element.LevelId);
-                if (lvl != null) levelName = lvl.Name;
-            }
-
-            if (db != null)
-            {
-            db.StageElement(
-                    element.Id.IntegerValue,
-                    ParseGuid(element.UniqueId),
-                    element.Name,
-                    element.Category?.Name ?? string.Empty,
-                    typeName,
-                    levelName,
-                    doc.PathName,
-                    lastSaved);
-            }
-
-            var paramData = new Dictionary<string, object>();
-            foreach (Parameter param in element.Parameters)
-            {
-                if (param == null) continue;
-                string name = param.Definition?.Name;
-                if (string.IsNullOrEmpty(name)) continue;
-                if (filterNames != null && !filterNames.Contains(name)) continue;
-                paramNames.Add(name);
-                string storage = param.StorageType.ToString();
-                object value = null;
-                string valueStr = null;
-                switch (param.StorageType)
-                {
-                    case StorageType.String:
-                        value = param.AsString();
-                        valueStr = param.AsString();
-                        break;
-                    case StorageType.Double:
-                        value = param.AsDouble();
-                        valueStr = param.AsDouble().ToString();
-                        break;
-                    case StorageType.Integer:
-                        value = param.AsInteger();
-                        valueStr = param.AsInteger().ToString();
-                        break;
-                    case StorageType.ElementId:
-                        value = param.AsElementId().IntegerValue;
-                        valueStr = param.AsElementId().IntegerValue.ToString();
-                        break;
-                }
-                bool isType = param.Element != null && param.Element.Id != element.Id;
-                var pInfo = new Dictionary<string, object>();
-                pInfo["value"] = value;
-                pInfo["storage"] = storage;
-                pInfo["is_type"] = isType;
-                if (parameterCategories.TryGetValue(name, out var cats) && cats.Count > 0)
-                    pInfo["categories"] = cats;
-                paramData[name] = pInfo;
-
-                if (db != null)
-                {
-                    db.StageParameter(element.Id.IntegerValue, name, valueStr, isType,
-                        cats?.ToArray(), lastSaved, doc.PathName);
-                }
-            }
-            result[id.IntegerValue.ToString()] = paramData;
+            var level = doc.GetElement(el.LevelId);
+            if (level != null)
+                levelName = level.Name;
         }
 
-        response["status"] = "success";
-        response["parameters"] = result;
-        response["parameter_names"] = paramNames.ToList();
-        if (db != null)
+        db.StageElement(
+            element.Id.IntegerValue,
+            ParseGuid(element.UniqueId),
+            element.Name,
+            element.Category?.Name ?? string.Empty,
+            typeName,
+            levelName,
+            doc.PathName,
+            lastSaved);
+    }
+
+    private static void StageParameterMetadata(
+        Element element,
+        HashSet<string> filterNames,
+        Dictionary<string, List<string>> parameterCategories,
+        HashSet<string> parameterNames,
+        BatchedPostgresDb db,
+        DateTime lastSaved,
+        string docPath)
+    {
+        foreach (Parameter param in element.Parameters)
         {
-            db.UpsertModelInfo(doc.PathName, doc.Title, ParseGuid(doc.ProjectInformation.UniqueId), lastSaved,
-                null, null);
-            db.CommitAll();
+            if (param == null) continue;
+
+            string name = param.Definition?.Name;
+            if (string.IsNullOrEmpty(name)) continue;
+            if (filterNames != null && !filterNames.Contains(name)) continue;
+
+            parameterNames.Add(name);
+
+            bool isType = param.Element != null && param.Element.Id != element.Id;
+            string value = GetParameterValueString(param);
+
+            string[] categories = null;
+            if (parameterCategories != null && parameterCategories.TryGetValue(name, out var cats) && cats != null && cats.Count > 0)
+                categories = cats.ToArray();
+
+            db.StageParameter(
+                element.Id.IntegerValue,
+                name,
+                value,
+                isType,
+                categories,
+                lastSaved,
+                docPath);
         }
-        return response;
+    }
+
+    private static string GetParameterValueString(Parameter param)
+    {
+        switch (param.StorageType)
+        {
+            case StorageType.String:
+                return param.AsString();
+            case StorageType.Double:
+                return param.AsDouble().ToString(CultureInfo.InvariantCulture);
+            case StorageType.Integer:
+                return param.AsInteger().ToString(CultureInfo.InvariantCulture);
+            case StorageType.ElementId:
+                var id = param.AsElementId();
+                return id != null ? id.IntegerValue.ToString(CultureInfo.InvariantCulture) : null;
+            default:
+                return param.AsValueString();
+        }
     }
 
     private static Guid ParseGuid(string uid)
     {
         if (string.IsNullOrEmpty(uid)) return Guid.Empty;
-        if (uid.Length >= 36)
-        {
-            Guid g;
-            if (Guid.TryParse(uid.Substring(0, 36), out g)) return g;
-        }
+        if (uid.Length >= 36 && Guid.TryParse(uid.Substring(0, 36), out var g))
+            return g;
         return Guid.Empty;
     }
 }

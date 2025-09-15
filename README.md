@@ -31,6 +31,14 @@ This project provides a Revit add‑in that exposes a Model Context Protocol (MC
 
 ---
 
+## Dashboard (optional)
+
+- Open `dashboard/index.html` in a browser to see quick charts (elements by category/level, types by category, top parameters, views by type).
+- The MCP server now includes CORS headers and handles `OPTIONS` preflight so the page can call `Db.Query` directly from the browser.
+- You can embed Flowise or n8n chat inside the dashboard; see `dashboard/README.md` for details.
+
+---
+
 ## How It Works
 
 - Revit add‑in loads an HTTP listener (`Core/McpServer.cs`) that accepts JSON payloads at `.../mcp/` and routes them to `ICommand` handlers (`Core/RequestHandler.cs`).
@@ -118,7 +126,7 @@ This project provides a Revit add‑in that exposes a Model Context Protocol (MC
 
 ## Commands (high level)
 
-- Listing: `Categories.List`, `Elements.List`, `Parameters.ListForElements`, `Types.List`, `Views.List`, `Sheets.List`, `Schedules.List`, `Model.GetContext`.
+- Listing: `Elements.List`, `Parameters.ListForElements`, `Types.List`, `Views.List`, `Sheets.List`, `Schedules.List`, `Model.GetContext`.
 - Modifying: `Elements.Modify`, `Parameters.CreateShared`, `Sheets.Create`, `Views.PlaceOnSheet`, `Filters.AddToView`.
 - Data: `Db.SyncModel` (optionally `"async":"true"`), `Db.Query`.
 - Orchestration: `Plan.Execute`, `Plan.Enqueue` (background via DB queue).
@@ -196,3 +204,4 @@ See `LICENSE`.
   - `revit_linked_elementtypes(host_doc_id, link_instance_id, id, ...)`: linked element type metadata (batched).
   - `model_info_linked(host_doc_id, link_doc_id, ...)`: per-host model info for the linked document.
 - Stale-row pruning: during sync, rows older than the current session `last_saved` are pruned for the active host model and processed link instances.
+

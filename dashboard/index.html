@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Revit MCP Dashboard</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <link rel="stylesheet" href="./iofbim-tokens.css" />
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <style>
+      /* Map iob-design-system tokens to dashboard variables (light theme) */
+      :root {
+        --bg: rgb(var(--color-customBg, 228 227 225));
+        --panel: rgb(var(--color-textLight, 241 235 231));
+        --text: rgb(var(--color-textDark, 63 59 54));
+        --muted: rgb(var(--color-textMid, 106 97 92));
+        --accent: rgb(var(--color-textAccent, 70 145 98));
+        --border: rgba(var(--color-textDark, 63 59 54), 0.15);
+        --hover: rgba(var(--color-textDark, 63 59 54), 0.05);
+        --active: rgba(var(--color-textDark, 63 59 54), 0.09);
+      }
+      * { box-sizing: border-box; }
+      body { margin:0; background:var(--bg); color:var(--text); font:12px/1.35 system-ui,Segoe UI,Roboto,Arial; }
+      header { padding:12px 16px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); }
+      h1 { font-size:16px; margin:0; letter-spacing:.3px; }
+      .controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+      select, input[type=text] { background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:6px 8px; min-width:220px; }
+      .grid { display:grid; grid-template-columns: repeat(12, 1fr); gap:14px; padding:14px; }
+      .card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:10px; min-height:280px; }
+      .card h2 { margin:0 0 8px; font-size:11px; color:var(--muted); font-weight:600; letter-spacing:.2px; }
+      .span-6 { grid-column: span 6; }
+      .span-12 { grid-column: span 12; }
+      footer { color:var(--muted); padding:12px 16px; font-size:12px; border-top:1px solid var(--border); }
+      .row { display:flex; gap:10px; align-items:center; }
+      .badge { font-size:10px; color:var(--muted); }
+      .chart { width:100%; height:260px; }
+      .chart.tall { height:300px; }
+      .list { max-height:240px; overflow:auto; border:1px solid var(--border); border-radius:8px; }
+      .list-item { padding:6px 8px; border-bottom:1px solid var(--border); cursor:pointer; display:flex; justify-content:space-between; }
+      .list-item:hover { background: var(--hover); }
+      .list-item.active { background: var(--active); }
+      .row-2 { grid-row: span 2; }
+      .layout { display:grid; grid-template-columns: 1fr; grid-template-areas: 'content' 'chat'; gap:14px; padding:14px; }
+      #content { grid-area: content; }
+      #chatPanel { grid-area: chat; min-height:420px; height:50vh; }
+      #chatPanel.collapsed { visibility:hidden; }
+      /* Current Selection table: keep header on top */
+      #detailsTable { table-layout: fixed; }
+      #detailsTable thead th {
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        background: var(--panel);
+      }
+      #detailsTable th, #detailsTable td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      @media (min-width: 1200px) {
+        .layout { grid-template-columns: 2fr 3fr; grid-template-areas: 'chat content'; align-items:start; }
+        #chatPanel { position:sticky; top:14px; height:calc(100vh - 160px); }
+      }
+      @media (min-width: 768px) and (max-width: 1199px) {
+        #chatPanel { height: 45vh; }
+      }
+      .hidden { display:none; }
+      a { color:var(--accent); text-decoration:none; }
+      a:hover { text-decoration:underline; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Revit MCP Dashboard</h1>
+      <div class="controls">
+        <div class="row" style="display:none">
+          <label for="endpoint" class="badge">MCP</label>
+          <input id="endpoint" type="text" value="http://localhost:5005/mcp/" title="MCP endpoint" />
+        </div>
+        <div class="row">
+          <label for="model" class="badge">Model</label>
+          <select id="model" style="width:260px"></select>
+        </div>
+        <div class="row">
+          <label for="chatProvider" class="badge">Chat</label>
+          <select id="chatProvider">
+            <option value="none">None</option>
+            <option value="flowise">Flowise</option>
+            <option value="n8n" selected>n8n</option>
+          </select>
+        </div>
+        <div id="flowiseInputs" class="row" style="display:none">
+          <label for="flowiseId" class="badge">Flowise ID</label>
+          <input id="flowiseId" type="text" value="9b6e96f3-609f-4500-b341-94f7c3857ebc" style="width:280px" />
+          <label for="flowiseHost" class="badge">Host</label>
+          <input id="flowiseHost" type="text" value="http://localhost:3000" style="width:220px" />
+        </div>
+        <div id="n8nInputs" class="row">
+          <label for="n8nWebhook" class="badge">n8n Webhook</label>
+          <input id="n8nWebhook" type="text" value="http://localhost:5678/webhook/1b5eef7c-a810-43f0-ac57-7d85fc820719/chat" style="width:360px" />
+        </div>
+        <button id="applyChat" style="background:var(--hover);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer">Apply Chat</button>
+        <button id="toggleChat" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:6px 10px;cursor:pointer">Show Chat</button>
+        <button id="refresh" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:6px 10px;cursor:pointer">Refresh</button>
+      </div>
+    </header>
+
+    <div class="controls" style="padding:6px 14px; gap:10px; border-bottom:1px solid var(--border);">
+      <span class="badge">Filters:</span>
+      <span id="filtersText" class="badge">(none)</span>
+      <button id="clearFilters" style="background:var(--hover);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:4px 8px;cursor:pointer">Clear</button>
+    </div>
+
+    <div class="layout">
+      <aside id="chatPanel" class="card chat collapsed">
+        <iframe id="chatFrame" style="width:100%;height:100%;border:0"></iframe>
+      </aside>
+      <main id="content" class="grid">
+        <section class="card span-12">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+            <h2 style="margin:0">Current Selection</h2>
+            <div class="row">
+              <label class="badge" for="pageSize">Page size</label>
+              <select id="pageSize">
+                <option>25</option>
+                <option>50</option>
+                <option>100</option>
+              </select>
+              <button id="prevPage" style="background:var(--hover);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer">Prev</button>
+              <button id="nextPage" style="background:var(--hover);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer">Next</button>
+              <button id="exportCsv" style="background:var(--hover);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer">Export CSV</button>
+            </div>
+          </div>
+          <div id="detailsInfo" class="badge" style="margin:6px 0 10px 0"></div>
+          <div style="max-height:320px; overflow:auto; border:1px solid var(--border); border-radius:8px;">
+            <table id="detailsTable" style="width:100%; border-collapse:collapse; font-size:13px;">
+              <thead>
+                <tr style="background:var(--panel);">
+                  <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">ID</th>
+                  <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">Name</th>
+                  <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">Category</th>
+                  <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">Type</th>
+                  <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">Level</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="card span-6">
+          <h2>Family and Types by Category</h2>
+          <div class="row" style="margin-bottom:8px; gap:8px; flex-wrap:wrap;">
+            <label class="badge" for="ftCategory">Category</label>
+            <select id="ftCategory" multiple style="min-width:240px; min-height:80px"></select>
+            <button id="clearFamily" style="background:var(--hover);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer">Clear Family</button>
+            <button id="clearType" style="background:var(--hover);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer">Clear Type</button>
+          </div>
+          <div class="grid" style="padding:0; gap:10px; grid-template-columns: 1fr 1fr;">
+            <div>
+              <div class="badge" style="margin-bottom:6px;">Families</div>
+              <div id="familyList" class="list"></div>
+            </div>
+            <div>
+              <div class="badge" style="margin-bottom:6px;">Types</div>
+              <div id="typeList" class="list"></div>
+            </div>
+          </div>
+        </section>
+        <section class="card span-6 row-2">
+          <h2>Types by Category</h2>
+          <div id="typesChart" class="chart" style="height:560px"></div>
+        </section>
+        <section class="card span-6">
+          <h2>Elements by Level</h2>
+          <div id="levelChart" class="chart"></div>
+        </section>
+
+        <section class="card span-12">
+          <h2>Recent Insight</h2>
+          <div id="insightMeta" class="badge"></div>
+          <div class="grid" style="padding:0; gap:10px; grid-template-columns: repeat(12,1fr);">
+            <div class="span-6"><div id="insightChart1" class="chart"></div></div>
+            <div class="span-6"><div id="insightChart2" class="chart"></div></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <footer>
+      Data served by MCP Db.Query. CORS enabled in plugin. — <a href="../README.md" target="_blank">Docs</a>
+    </footer>
+
+    <script src="./main.js"></script>
+  </body>
+</html>

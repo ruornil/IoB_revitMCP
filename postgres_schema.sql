@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS revit_elements (
     CONSTRAINT pk_revit_elements PRIMARY KEY (doc_id, id)
 );
 
+
 -- Table: model_info
 CREATE TABLE IF NOT EXISTS model_info (
     doc_id TEXT PRIMARY KEY,
@@ -51,6 +52,9 @@ CREATE TABLE IF NOT EXISTS revit_parameters (
     CONSTRAINT unique_element_param_v2 UNIQUE (doc_id, element_id, param_name)
 );
 
+CREATE INDEX IF NOT EXISTS idx_revit_parameters_doc_param ON revit_parameters (doc_id, param_name);
+CREATE INDEX IF NOT EXISTS idx_revit_parameters_doc_element ON revit_parameters (doc_id, element_id);
+
 CREATE TABLE IF NOT EXISTS revit_type_parameters (
     id SERIAL PRIMARY KEY,
     doc_id TEXT,
@@ -61,6 +65,9 @@ CREATE TABLE IF NOT EXISTS revit_type_parameters (
     last_saved TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT unique_type_param_v2 UNIQUE (doc_id, element_type_id, param_name)
 );
+
+CREATE INDEX IF NOT EXISTS idx_revit_type_parameters_doc_param ON revit_type_parameters (doc_id, param_name);
+CREATE INDEX IF NOT EXISTS idx_revit_type_parameters_doc_type ON revit_type_parameters (doc_id, element_type_id);
 
 -- Table: revit_categories
 CREATE TABLE IF NOT EXISTS revit_categories (
@@ -211,4 +218,14 @@ CREATE TABLE IF NOT EXISTS model_info_linked (
   project_info JSONB,
   project_parameters JSONB,
   CONSTRAINT pk_model_info_linked PRIMARY KEY (host_doc_id, link_doc_id)
+);
+
+-- UI events for dashboard insights
+CREATE TABLE IF NOT EXISTS ui_events (
+  id SERIAL PRIMARY KEY,
+  session_id TEXT,
+  doc_id TEXT,
+  event_type TEXT NOT NULL,
+  payload JSONB,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

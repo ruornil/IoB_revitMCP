@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Flowise Chat</title>
+    <link rel="stylesheet" href="./iofbim-tokens.css" />
+    <style>
+      :root {
+        --dash-bg: rgb(var(--color-customBg, 228 227 225));
+        --dash-accent: rgb(var(--color-textAccent, 70 145 98));
+      }
+      html, body { height:100%; width:100%; margin:0; background:var(--dash-bg); }
+    </style>
+  </head>
+  <body>
+    <flowise-fullchatbot></flowise-fullchatbot>
+    <script type="module">
+      import Chatbot from 'https://cdn.jsdelivr.net/npm/flowise-embed/dist/web.js';
+      const params = new URLSearchParams(location.search);
+      const chatflowid = params.get('id');
+      const apiHost = params.get('host');
+      const sid = params.get('sid'); // reserved for future metadata plumbing
+      Chatbot.initFull({
+        chatflowid,
+        apiHost,
+        theme: {
+          button: { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--dash-accent').trim() || '#469162' },
+          chatWindow: { width: '100%', height: '100%' }
+        }
+      });
+    </script>
+  </body>
+  </html>
