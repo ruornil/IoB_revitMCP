@@ -145,9 +145,12 @@
         </section>
         <section class="card span-6">
           <h2>Family and Types by Category</h2>
-          <div class="row" style="margin-bottom:8px; gap:8px; flex-wrap:wrap;">
-            <label class="badge" for="ftCategory">Category</label>
-            <select id="ftCategory" multiple style="min-width:240px; min-height:80px"></select>
+          <div class="row" style="margin-bottom:8px; gap:8px; flex-wrap:wrap; align-items:flex-start;">
+            <div>
+              <div class="badge">Categories</div>
+              <div id="categorySummary" class="badge" style="margin-top:4px; padding:4px 6px; border-radius:6px; background:var(--hover); color:var(--text);">All categories</div>
+            </div>
+            <button id="clearCategories" style="background:var(--hover);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer">Clear Categories</button>
             <button id="clearFamily" style="background:var(--hover);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer">Clear Family</button>
             <button id="clearType" style="background:var(--hover);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer">Clear Type</button>
           </div>
@@ -189,3 +192,4 @@
     <script src="./main.js"></script>
   </body>
 </html>
+

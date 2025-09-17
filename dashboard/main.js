@@ -661,5 +661,3 @@ function csvEscape(v){
   if (/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
   return s;
 }
-
-

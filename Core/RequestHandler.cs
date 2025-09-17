@@ -32,7 +32,6 @@ public class RequestHandler : IExternalEventHandler
         { "Tools.CaptureState", new CaptureToolStateCommand()},
 
         // Categories / Types / Elements / Parameters
-        { "Categories.List", new ListCategoriesCommand()},
         { "Types.List", new ListFamiliesAndTypesCommand()},
         { "Elements.List", new ListElementsCommand() },
         { "Elements.Modify", new ModifyElementsCommand() },
