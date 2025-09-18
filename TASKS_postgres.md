@@ -1,6 +1,7 @@
 # PostgreSQL Integration Tasks
 
 ## 1. Setup Npgsql Data Layer
+
 - Add `Npgsql` (and optionally `Dapper`) package references in `IoB_revitMCP.csproj` and `packages.config`.
 - Create a new folder `Data` with `PostgresDb.cs` that manages a connection string and exposes helpers:
   - `ExecuteNonQuery(string sql, params NpgsqlParameter[] args)`
@@ -9,6 +10,7 @@
 - Use `System.Configuration.ConfigurationManager` to read the connection string from `App.config`.
 
 ## 2. Sync Commands
+
 - **SyncModelToSqlCommand.cs**
   - Accepts optional `element_ids` to limit export.
   - Gathers element metadata (id, guid, name, category, type name, level, doc id).
@@ -22,6 +24,7 @@
 - Extend **GetFamiliesAndTypesCommand.cs** to capture family GUID and doc id and update `revit_families`.
 
 ## 3. Query Commands
+
 - **QuerySqlCommand.cs**
   - Accepts a SQL string and optional parameters.
   - Executes the query through `PostgresDb` and returns results as a list of dictionaries.
@@ -29,9 +32,11 @@
   - Fetches metadata for specified element ids directly from the database rather than Revit.
 
 ## 4. Command Registration
+
 - Update `Core/RequestHandler.cs` `CommandMap` with the new commands: `SyncModelToSql`, `QuerySql`, `ListCategories`, `ListViews`, `ListSheets`, `ListSchedules` and updated `GetFamiliesAndTypes`.
 
 ## 5. Documentation
+
 - Document connection string configuration in `README.md` with an example `App.config` snippet.
 - Provide example JSON payloads for `SyncModelToSql` and `QuerySql` commands.
 

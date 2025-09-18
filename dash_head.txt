@@ -40,7 +40,7 @@
       .list-item:hover { background: var(--hover); }
       .list-item.active { background: var(--active); }
       .row-2 { grid-row: span 2; }
-      .layout { display:grid; grid-template-columns: 1fr; grid-template-areas: 'content'; gap:14px; padding:14px; }
+      .layout { display:grid; grid-template-columns: 1fr; grid-template-areas: 'content' 'chat'; gap:14px; padding:14px; }
       #content { grid-area: content; }
       #chatPanel { grid-area: chat; min-height:420px; height:50vh; }
       #chatPanel.collapsed { visibility:hidden; }
@@ -52,16 +52,10 @@
         z-index: 3;
         background: var(--panel);
       }
-      /* Keep totals row visible at bottom of the scroll container */
-      #detailsTable tfoot td {
-        position: sticky;
-        bottom: 0;
-        z-index: 2;
-        background: var(--panel);
-      }
       #detailsTable th, #detailsTable td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       @media (min-width: 1200px) {
-        .layout { grid-template-columns: 1fr; grid-template-areas: 'content'; align-items:start; }
+        .layout { grid-template-columns: 2fr 3fr; grid-template-areas: 'chat content'; align-items:start; }
+        #chatPanel { position:sticky; top:14px; height:calc(100vh - 160px); }
       }
       @media (min-width: 768px) and (max-width: 1199px) {
         #chatPanel { height: 45vh; }
@@ -75,7 +69,7 @@
     <header>
       <h1>Revit MCP Dashboard</h1>
       <div class="controls">
-        <div class="row">
+        <div class="row" style="display:none">
           <label for="endpoint" class="badge">MCP</label>
           <input id="endpoint" type="text" value="http://localhost:5005/mcp/" title="MCP endpoint" />
         </div>
@@ -83,10 +77,26 @@
           <label for="model" class="badge">Model</label>
           <select id="model" style="width:260px"></select>
         </div>
+        <div class="row">
+          <label for="chatProvider" class="badge">Chat</label>
+          <select id="chatProvider">
+            <option value="none">None</option>
+            <option value="flowise">Flowise</option>
+            <option value="n8n" selected>n8n</option>
+          </select>
+        </div>
+        <div id="flowiseInputs" class="row" style="display:none">
+          <label for="flowiseId" class="badge">Flowise ID</label>
+          <input id="flowiseId" type="text" value="9b6e96f3-609f-4500-b341-94f7c3857ebc" style="width:280px" />
+          <label for="flowiseHost" class="badge">Host</label>
+          <input id="flowiseHost" type="text" value="http://localhost:3000" style="width:220px" />
+        </div>
         <div id="n8nInputs" class="row">
           <label for="n8nWebhook" class="badge">n8n Webhook</label>
           <input id="n8nWebhook" type="text" value="http://localhost:5678/webhook/1b5eef7c-a810-43f0-ac57-7d85fc820719/chat" style="width:360px" />
         </div>
+        <button id="applyChat" style="background:var(--hover);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer">Apply Chat</button>
+        <button id="toggleChat" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:6px 10px;cursor:pointer">Show Chat</button>
         <button id="refresh" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:6px 10px;cursor:pointer">Refresh</button>
       </div>
     </header>
@@ -98,6 +108,9 @@
     </div>
 
     <div class="layout">
+      <aside id="chatPanel" class="card chat collapsed">
+        <iframe id="chatFrame" style="width:100%;height:100%;border:0"></iframe>
+      </aside>
       <main id="content" class="grid">
         <section class="card span-12">
           <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
@@ -109,32 +122,22 @@
                 <option>50</option>
                 <option>100</option>
               </select>
-              <label class="badge" for="unitsMode" style="margin-left:10px;">Units</label>
-              <select id="unitsMode" title="Choose display units">
-                <option value="imperial">Imperial</option>
-                <option value="metric">Metric (SI)</option>
-              </select>
               <button id="prevPage" style="background:var(--hover);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer">Prev</button>
               <button id="nextPage" style="background:var(--hover);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer">Next</button>
               <button id="exportCsv" style="background:var(--hover);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer">Export CSV</button>
             </div>
           </div>
           <div id="detailsInfo" class="badge" style="margin:6px 0 10px 0"></div>
-          <div class="row" style="margin:0 0 10px 0; gap:8px; align-items:flex-start; flex-wrap:wrap;">
-            <div>
-              <div class="badge">Columns</div>
-              <select id="paramColumns" multiple size="6" style="min-width:260px; background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:8px;"></select>
-            </div>
-            <div style="display:flex; flex-direction:column; gap:6px;">
-              <button id="applyParamCols" style="background:var(--hover);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer;">Apply Columns</button>
-              <button id="clearParamCols" style="background:var(--hover);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer;">Clear</button>
-            </div>
-            <div class="badge" id="paramsInfo" style="margin-left:auto"></div>
-          </div>
           <div style="max-height:320px; overflow:auto; border:1px solid var(--border); border-radius:8px;">
             <table id="detailsTable" style="width:100%; border-collapse:collapse; font-size:13px;">
               <thead>
-                <tr id="detailsHeader" style="background:var(--panel);"></tr>
+                <tr style="background:var(--panel);">
+                  <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">ID</th>
+                  <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">Name</th>
+                  <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">Category</th>
+                  <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">Type</th>
+                  <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">Level</th>
+                </tr>
               </thead>
               <tbody></tbody>
             </table>
@@ -171,28 +174,34 @@
           <div id="levelChart" class="chart"></div>
         </section>
 
-
-        
-      </main>
-    </div>
-
-    <!-- Slide-up Drawer Chat (n8n) -->
-    <div id="miniDrawer" aria-label="Chat drawer" style="position:fixed; left:0; right:0; bottom:0; z-index:20; pointer-events:none;">
-      <div id="miniDrawerBar" style="margin:auto; width:min(980px, 96%); pointer-events:auto;">
-        <div id="miniDrawerHandle" style="display:flex; align-items:center; gap:8px; justify-content:space-between; background:var(--text); color:var(--panel); border:1px solid var(--text); border-bottom:none; border-radius:12px 12px 0 0; padding:6px 10px; cursor:pointer;">
-          <div class="badge" style="color:var(--panel)">Chat</div>
-          <div id="miniDrawerHint" class="badge" style="opacity:.9; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; max-width:70%; color:var(--panel)"></div>
-          <div class="badge" id="miniDrawerChevron" style="color:var(--panel)">▲</div>
-        </div>
-        <div id="miniDrawerBody" style="display:none; background:var(--text); color:var(--panel); border:1px solid var(--text); border-top:none; border-radius:0 0 12px 12px; padding:8px;">
-          <div id="miniChatAI" class="badge" style="font-size:12px; line-height:1.35; max-height:5.6em; overflow:auto; white-space:pre-wrap; border:1px solid var(--border); border-radius:8px; padding:6px; background:#2b2b2b; color:var(--panel);"></div>
-          <div style="display:flex; gap:8px; align-items:flex-start; margin-top:8px;">
-            <textarea id="miniChatInput" rows="2" placeholder="Type your message..." style="flex:1; resize:vertical; max-height:3.2em; background:#2b2b2b; color:var(--panel); border:1px solid var(--border); border-radius:8px; padding:6px; font-size:12px;"></textarea>
-            <button id="miniChatSend" style="background:var(--accent); color:white; border:none; border-radius:8px; padding:8px 10px; cursor:pointer;">Send</button>
-            <button id="miniChatStop" style="background:#444; color:var(--panel); border:1px solid var(--border); border-radius:8px; padding:8px 10px; cursor:pointer;">Stop</button>
+        <section class="card span-12">
+          <h2>Recent Insight</h2>
+          <div id="insightMeta" class="badge"></div>
+          <div class="grid" style="padding:0; gap:10px; grid-template-columns: repeat(12,1fr);">
+            <div class="span-6"><div id="insightChart1" class="chart"></div></div>
+            <div class="span-6"><div id="insightChart2" class="chart"></div></div>
           </div>
-        </div>
-      </div>
+        </section>
+
+        <section class="card span-12">
+          <h2>Element Parameters</h2>
+          <div id="paramsInfo" class="badge" style="margin:6px 0 10px 0"></div>
+          <div style="max-height:320px; overflow:auto; border:1px solid var(--border); border-radius:8px;">
+            <table id="paramsTable" style="width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed;">
+              <thead>
+                <tr style="background:var(--panel);">
+                  <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border); width:90px;">ID</th>
+                  <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border); width:220px;">Family</th>
+                  <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border); width:220px;">Type</th>
+                  <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border); width:240px;">Parameter</th>
+                  <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">Value</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
     </div>
 
     <footer>

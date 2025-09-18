@@ -1,4 +1,4 @@
-﻿async function mcp(endpoint, body) {
+async function mcp(endpoint, body) {
   const res = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -42,45 +42,6 @@ let selectedParamCols = [];
 let unitsMode = 'imperial'; // or 'metric'
 let miniAbort = null; // AbortController for mini chat
 
-// Category denylist config (loaded from file or localStorage)
-let hiddenCategories = null;
-const defaultHiddenCategories = [
-  'Levels','Views','Viewports','Sheets','Schedules','Project Information',
-  'Grids','Reference Planes','Title Blocks','Revision Clouds','Text Notes',
-  'Dimensions','Tags'
-];
-async function loadDenyList(){
-  // 1) Try localStorage override
-  try {
-    const raw = localStorage.getItem('mcp_hidden_categories');
-    if (raw){ const arr = JSON.parse(raw); if (Array.isArray(arr)) { hiddenCategories = arr; return; } }
-  } catch {}
-
-  // 2) Try embedded script tag (optional)
-  try {
-    const el = document.getElementById('category-denylist');
-    if (el && el.textContent){ const arr = JSON.parse(el.textContent); if (Array.isArray(arr)) { hiddenCategories = arr; return; } }
-  } catch {}
-
-  // 3) If served via http/https, try fetching the JSON file. Skip under file:// to avoid CORS console noise.
-  try {
-    const proto = (location && location.protocol || '').toLowerCase();
-    if (proto === 'http:' || proto === 'https:'){
-      const res = await fetch('./category-denylist.json', { cache: 'no-store' });
-      if (res.ok){ const arr = await res.json(); if (Array.isArray(arr)) { hiddenCategories = arr; return; } }
-    }
-  } catch {}
-
-  // 4) Fallback to built-in defaults
-  hiddenCategories = defaultHiddenCategories.slice();
-}
-function sqlHideCategories(columnName){
-  const cats = hiddenCategories;
-  if (!cats || !cats.length) return '';
-  const list = cats.map(c=> "'" + String(c).replace(/'/g, "''") + "'").join(',');
-  return ` AND ${columnName} NOT IN (${list})`;
-}
-
 function filtersText(){
   const f = [];
   const cats = (filterState.categories && filterState.categories.length) ? filterState.categories : (filterState.category ? [filterState.category] : []);
@@ -101,7 +62,7 @@ async function loadModels() {
   for (const row of data) {
     const opt = document.createElement('option');
     opt.value = row.doc_id;
-    opt.textContent = row.model_name ? `${row.model_name} â€” ${row.doc_id}` : row.doc_id;
+    opt.textContent = row.model_name ? `${row.model_name} — ${row.doc_id}` : row.doc_id;
     sel.appendChild(opt);
   }
   // Preserve previous selection if still available; otherwise select first
@@ -123,25 +84,24 @@ async function loadCharts() {
   const qsParams = (obj) => JSON.stringify(obj);
   // Build WHERE fragments based on active filters (support multi-category)
   const catList = (filterState.categories && filterState.categories.length) ? filterState.categories : (filterState.category ? [filterState.category] : []);
-  const catFilter = catList.length ? (' AND category IN (' + catList.map(c => "'" + String(c).replace(/'/g, "''") + "'").join(',') + ')') : '';  const lvlFilter = filterState.level ? ' AND level=@lvl' : '';
+  const catFilter =\n  ;  const lvlFilter = filterState.level ? ' AND level=@lvl' : '';
   const typeFilter = filterState.type ? ' AND type_name=@typ' : '';
   const familyInFilter = filterState.family ? (' AND type_name IN (SELECT type_name FROM revit_elementTypes WHERE doc_id=@doc' + (catList.length ? (' AND category IN (' + catList.map(c => "'" + String(c).replace(/'/g, "''") + "'").join(',') + ')') : '') + ' AND family=@fam)') : '';
 
-  const hideFilterCharts = (hiddenCategories && hiddenCategories.length) ? (' AND category NOT IN (' + hiddenCategories.map(c=>"'"+String(c).replace(/'/g,"''")+"'").join(',') + ')') : '';
   const queries = {
     byCat: {
       action: 'Db.Query',
-      sql: `SELECT COALESCE(category,'(none)') AS category, COUNT(*) AS c FROM revit_elements WHERE doc_id=@doc${lvlFilter}${typeFilter}${familyInFilter}${catFilter}${hideFilterCharts} GROUP BY category ORDER BY c DESC LIMIT 20`,
+      sql: `SELECT COALESCE(category,'(none)') AS category, COUNT(*) AS c FROM revit_elements WHERE doc_id=@doc GROUP BY category ORDER BY c DESC LIMIT 20`,
       params: qsParams({ '@doc': doc, ...(filterState.level ? { '@lvl': filterState.level } : {}), ...(filterState.type ? { '@typ': filterState.type } : {}), ...(filterState.family ? { '@fam': filterState.family } : {}) })
     },
     byLevel: {
       action: 'Db.Query',
-      sql: "SELECT COALESCE(level, '(none)') AS level, COUNT(*) AS c FROM revit_elements WHERE doc_id=@doc" + catFilter + hideFilterCharts + typeFilter + familyInFilter + ' GROUP BY level ORDER BY c DESC',
+      sql: "SELECT COALESCE(level, '(none)') AS level, COUNT(*) AS c FROM revit_elements WHERE doc_id=@doc" + catFilter + typeFilter + familyInFilter + ' GROUP BY level ORDER BY c DESC',
       params: qsParams({ '@doc': doc, ...(filterState.type ? { '@typ': filterState.type } : {}), ...(filterState.family ? { '@fam': filterState.family } : {}) })
     },
     typesByCat: {
       action: 'Db.Query',
-      sql: `SELECT COALESCE(category,'(none)') AS category, COUNT(DISTINCT type_name) AS c FROM revit_elements WHERE doc_id=@doc${lvlFilter}${typeFilter}${familyInFilter}${catFilter}${hideFilterCharts} GROUP BY category ORDER BY c DESC LIMIT 20`,
+      sql: `SELECT COALESCE(category,'(none)') AS category, COUNT(DISTINCT type_name) AS c FROM revit_elements WHERE doc_id=@doc GROUP BY category ORDER BY c DESC LIMIT 20`,
       params: qsParams({ '@doc': doc, ...(filterState.level ? { '@lvl': filterState.level } : {}), ...(filterState.type ? { '@typ': filterState.type } : {}), ...(filterState.family ? { '@fam': filterState.family } : {}) })
     }
   };
@@ -220,13 +180,8 @@ async function loadFamilyTypePanel(){
   if (!doc) return;
   const qsParams = (obj) => JSON.stringify(obj);
 
-  // Load categories for select (from elementTypes) with denylist + instances only
-  const hideFilterFT = (hiddenCategories && hiddenCategories.length)
-    ? (' AND t.category NOT IN (' + hiddenCategories.map(c=>"'"+String(c).replace(/'/g,"''")+"'").join(',') + ')') : '';
-  const catsSql = "SELECT t.category, COUNT(DISTINCT t.family) AS c FROM revit_elementTypes t WHERE t.doc_id=@doc"
-    + hideFilterFT + " AND EXISTS (SELECT 1 FROM revit_elements e WHERE e.doc_id=@doc AND e.category=t.category)"
-    + " GROUP BY t.category ORDER BY c DESC";
-  const catsResp = await mcp(endpoint, { action:'Db.Query', sql: catsSql, params: qsParams({ '@doc': doc }) });
+  // Load categories for select (from elementTypes)
+  const catsResp = await mcp(endpoint, { action:'Db.Query', sql: "SELECT COALESCE(category,'(none)') AS category, COUNT(DISTINCT family) AS c FROM revit_elementTypes WHERE doc_id=@doc GROUP BY category ORDER BY c DESC", params: qsParams({ '@doc': doc }) });
   const cats = (catsResp.results || catsResp.rows || catsResp.data || []).map(r=>r.category);
   const sel = qs('ftCategory');
   if (sel){
@@ -239,9 +194,8 @@ async function loadFamilyTypePanel(){
 
   // Families for current category (or all)
   const catList = (filterState.categories && filterState.categories.length) ? filterState.categories : (filterState.category ? [filterState.category] : []);
-  const famWhere = (catList.length ? ('WHERE t.doc_id=@doc AND t.category IN (' + catList.map(c=>"'"+String(c).replace(/'/g,"''")+"'").join(',') + ')') : 'WHERE t.doc_id=@doc')
-    + hideFilterFT + ' AND EXISTS (SELECT 1 FROM revit_elements e WHERE e.doc_id=@doc AND e.type_name=t.type_name)';
-  const famResp = await mcp(endpoint, { action:'Db.Query', sql: `SELECT t.family, COUNT(DISTINCT t.type_name) AS c FROM revit_elementTypes t ${famWhere} GROUP BY t.family ORDER BY c DESC LIMIT 200`, params: qsParams({ '@doc': doc }) });
+  const famWhere = catList.length ? ('WHERE doc_id=@doc AND category IN (' + catList.map(c=>"'"+String(c).replace(/'/g,"''")+"'").join(',') + ')') : 'WHERE doc_id=@doc';
+  const famResp = await mcp(endpoint, { action:'Db.Query', sql: `SELECT family, COUNT(DISTINCT type_name) AS c FROM revit_elementTypes ${famWhere} GROUP BY family ORDER BY c DESC LIMIT 200`, params: qsParams({ '@doc': doc }) });
   const fams = (famResp.results || famResp.rows || famResp.data || []);
   const famList = qs('familyList');
   if (famList){
@@ -260,9 +214,8 @@ async function loadFamilyTypePanel(){
   if (typeList){
     typeList.innerHTML='';
     if (filterState.family){
-      const typeWhere = 'WHERE t.doc_id=@doc' + (catList.length ? (' AND t.category IN (' + catList.map(c=>"'"+String(c).replace(/'/g,"''")+"'").join(',') + ')') : '') + ' AND t.family=@fam'
-        + hideFilterFT + ' AND EXISTS (SELECT 1 FROM revit_elements e WHERE e.doc_id=@doc AND e.type_name=t.type_name)';
-      const typeResp = await mcp(endpoint, { action:'Db.Query', sql: `SELECT t.type_name, COUNT(*) AS c FROM revit_elementTypes t ${typeWhere} GROUP BY t.type_name ORDER BY c DESC LIMIT 400`, params: qsParams({ '@doc': doc, '@fam': filterState.family }) });
+      const typeWhere = 'WHERE doc_id=@doc' + (catList.length ? (' AND category IN (' + catList.map(c=>"'"+String(c).replace(/'/g,"''")+"'").join(',') + ')') : '') + ' AND family=@fam';
+      const typeResp = await mcp(endpoint, { action:'Db.Query', sql: `SELECT type_name, COUNT(*) AS c FROM revit_elementTypes ${typeWhere} GROUP BY type_name ORDER BY c DESC LIMIT 400`, params: qsParams({ '@doc': doc, '@fam': filterState.family }) });
       const types = (typeResp.results || typeResp.rows || typeResp.data || []);
       for (const t of types){
         const div = document.createElement('div');
@@ -276,11 +229,10 @@ async function loadFamilyTypePanel(){
 }
 
 async function init() {
-  // Generate or reuse a session id to correlate chat â†” dashboard
+  // Generate or reuse a session id to correlate chat ↔ dashboard
   sessionId = (localStorage.getItem('mcp_dash_session')) || (self.crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
   localStorage.setItem('mcp_dash_session', sessionId);
   qs('refresh').addEventListener('click', async () => {
-  try { await loadDenyList(); } catch {}
     await flushUiEventsSafe();
     await loadModels();
     await loadCharts();
@@ -461,8 +413,8 @@ function headerWithUnits(name){
   if (unitsMode !== "metric") return name;
   const kind = inferUnitKind(name);
   if (kind === "length") return `${name} (m)`;
-  if (kind === "area") return `${name} (mï¿½)`;
-  if (kind === "volume") return `${name} (mï¿½)`;
+  if (kind === "area") return `${name} (m�)`;
+  if (kind === "volume") return `${name} (m�)`;
   return name;
 }
 
@@ -588,11 +540,7 @@ async function loadDetails(){
     }
     if (Array.isArray(filterState.selectionIds) && filterState.selectionIds.length){
       const ids = filterState.selectionIds.filter(n=>Number.isFinite(n)).slice(0,500);
-      if (ids.length){ where.push(`id IN (${ids.join(',')}    // Apply category denylist
-    if (hiddenCategories && hiddenCategories.length){
-      const list = hiddenCategories.map(c=>"'"+String(c).replace(/'/g,"''")+"'").join(',');
-      where.push(category NOT IN ());
-    })`); }
+      if (ids.length){ where.push(`id IN (${ids.join(',')})`); }
     }
     const whereSql = where.join(' AND ');
     const paramsBase = { '@doc': doc, ...(filterState.level ? { '@lvl': filterState.level } : {}), ...(filterState.type ? { '@typ': filterState.type } : {}), ...(filterState.family ? { '@fam': filterState.family } : {}) };
@@ -674,7 +622,7 @@ async function loadDetails(){
     tfoot.appendChild(trow); table.appendChild(tfoot);
 
     const offset2 = (pager.page - 1) * pager.pageSize; const start = total ? offset2 + 1 : 0; const end = Math.min(total, offset2 + rows.length); const maxPage = Math.max(1, Math.ceil(total / Math.max(1,pager.pageSize)));
-    const info = qs('detailsInfo'); if (info) info.textContent = total ? `Showing ${start}-${end} of ${total} — Page ${pager.page}/${maxPage}` : 'No rows match the current filters.';
+    const info = qs('detailsInfo'); if (info) info.textContent = total ? `Showing ${start}-${end} of ${total} � Page ${pager.page}/${maxPage}` : 'No rows match the current filters.';
   } catch (e) {
     console.error('loadDetails error', e);
     const info = qs('detailsInfo'); if (info) info.textContent = 'Error loading details: ' + (e?.message || e);
@@ -756,8 +704,6 @@ async function exportCsvAll(){
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
-
-
 
 
 
