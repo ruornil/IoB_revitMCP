@@ -279,6 +279,8 @@ async function init() {
   // Generate or reuse a session id to correlate chat â†” dashboard
   sessionId = (localStorage.getItem('mcp_dash_session')) || (self.crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
   localStorage.setItem('mcp_dash_session', sessionId);
+  // Load category denylist before initial render
+  try { await loadDenyList(); } catch {}
   qs('refresh').addEventListener('click', async () => {
   try { await loadDenyList(); } catch {}
     await flushUiEventsSafe();
@@ -588,11 +590,12 @@ async function loadDetails(){
     }
     if (Array.isArray(filterState.selectionIds) && filterState.selectionIds.length){
       const ids = filterState.selectionIds.filter(n=>Number.isFinite(n)).slice(0,500);
-      if (ids.length){ where.push(`id IN (${ids.join(',')}    // Apply category denylist
+      if (ids.length){ where.push('id IN (' + ids.join(',') + ')'); }
+    }
+    // Apply category denylist to details table
     if (hiddenCategories && hiddenCategories.length){
       const list = hiddenCategories.map(c=>"'"+String(c).replace(/'/g,"''")+"'").join(',');
-      where.push(category NOT IN ());
-    })`); }
+      where.push('category NOT IN (' + list + ')');
     }
     const whereSql = where.join(' AND ');
     const paramsBase = { '@doc': doc, ...(filterState.level ? { '@lvl': filterState.level } : {}), ...(filterState.type ? { '@typ': filterState.type } : {}), ...(filterState.family ? { '@fam': filterState.family } : {}) };
@@ -709,6 +712,11 @@ async function exportCsvAll(){
   if (Array.isArray(filterState.selectionIds) && filterState.selectionIds.length){
     const ids = filterState.selectionIds.filter(n=>Number.isFinite(n)).slice(0,10000);
     if (ids.length){ where.push(`id IN (${ids.join(',')})`); }
+  }
+  // Apply category denylist to export
+  if (hiddenCategories && hiddenCategories.length){
+    const list = hiddenCategories.map(c=>"'"+String(c).replace(/'/g,"''")+"'").join(',');
+    where.push('category NOT IN (' + list + ')');
   }
   const whereSql = where.join(' AND ');
   const paramsBase = { '@doc': doc, ...(filterState.level ? { '@lvl': filterState.level } : {}), ...(filterState.type ? { '@typ': filterState.type } : {}), ...(filterState.family ? { '@fam': filterState.family } : {}) };
