@@ -1,0 +1,9 @@
+/* Copied token mappings from dashboard for consistent styling */
+:root {
+  --color-customBg: 228 227 225;
+  --color-textLight: 241 235 231;
+  --color-textDark: 63 59 54;
+  --color-textMid: 106 97 92;
+  --color-textAccent: 70 145 98;
+}
+
